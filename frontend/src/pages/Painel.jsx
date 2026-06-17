@@ -1,52 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Film, Layers, Video, Briefcase, Users, Calendar,
   Settings, Palette, Plus, Edit2, Trash2, X, Save,
   ExternalLink, LogOut, Menu, ChevronDown, GripVertical,
-  MessageCircle, CheckCircle, AlertCircle, BookOpen,
+  MessageCircle, CheckCircle, AlertCircle, BookOpen, Loader2,
 } from 'lucide-react';
-
-// ── Dados mockados ────────────────────────────────────────────────────────────
-const MOCK = {
-  categorias: [
-    { id: '1', nome: 'Hero', slug: 'hero' },
-    { id: '2', nome: 'Portfolio', slug: 'portfolio' },
-  ],
-  produtos: [
-    { id: '1', nome: 'Showreel 2024', descricao: 'Motion Design', estoque: '2024', sort: 1, categoria_id: '1', link_projeto: '', whatsapp_projeto: '' },
-    { id: '2', nome: 'Brand Film', descricao: 'Film', estoque: '2023', sort: 2, categoria_id: '2', link_projeto: '', whatsapp_projeto: '' },
-  ],
-  servicos: [
-    { id: '1', titulo: 'Motion Design', resumo: 'Animação e motion graphics de alto nível.' },
-    { id: '2', titulo: 'Colorização', resumo: 'Color grading cinematográfico.' },
-  ],
-  leads: [
-    { id: '1', nome: 'João Silva', whatsapp: '11999999999', email: 'joao@email.com', date_created: '2024-06-01' },
-  ],
-  agenda: [
-    { id: '1', data_hora: '2024-07-10T14:00', disponivel: true, cliente_nome: '' },
-  ],
-  config: {
-    nome: 'Creapes',
-    whatsapp_comercial: '11999999999',
-    instagram_url: 'https://instagram.com/creapes',
-    cor_fundo: '#0f1923',
-    cor_texto: '#f5f5f7',
-    cor_primaria: '#d0ff00',
-    fonte_titulo: "'Space Grotesk', sans-serif",
-    fonte_texto: "'Inter', -apple-system, sans-serif",
-    sobre_titulo: 'We Are Creapes',
-    sobre_texto: 'Produtora audiovisual de alto padrão.',
-    logos_clientes: '',
-    logo_url: null,
-    banner1_url: null,
-    bannermenor1_url: null,
-    bannermenor2_url: null,
-  },
-  blogPosts: [
-    { id: '1', titulo: 'Como criamos o Showreel 2024', slug: 'showreel-2024', resumo: 'Bastidores da produção.', conteudo: '', imagem_capa: null, data_publicacao: '2024-06-01' },
-  ],
-};
+import {
+  getCategorias, createCategoria, updateCategoria, deleteCategoria,
+  getCases, createCase, updateCase, deleteCase,
+  getServicos, createServico, updateServico, deleteServico,
+  getLeads,
+  getAgenda, createHorario, updateHorario, deleteHorario,
+  getConfig, updateConfig,
+  getBlogPosts, createBlogPost, updateBlogPost, deleteBlogPost,
+} from '../lib/api';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function Modal({ open, onClose, title, children }) {
@@ -82,6 +49,18 @@ function Field({ label, children }) {
   );
 }
 
+function LoadingRow({ cols }) {
+  return (
+    <tr>
+      <td colSpan={cols} className="px-6 py-10 text-center text-gray-500">
+        <div className="flex items-center justify-center gap-2">
+          <Loader2 size={16} className="animate-spin" /> Carregando...
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 const inputCls = "w-full bg-neutral-800 border border-neutral-700 rounded p-3 text-white focus:border-yellow-500 outline-none";
 const btnPrimary = "bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded flex items-center gap-2 text-sm";
 const btnCancel = "px-6 py-3 rounded text-gray-400 hover:text-white";
@@ -100,6 +79,15 @@ const TABS = [
   { id: 'config',     label: 'Configurações Base',   icon: Settings },
 ];
 
+const CONFIG_DEFAULT = {
+  nome: '', whatsapp_comercial: '', instagram_url: '',
+  cor_fundo: '#0f1923', cor_texto: '#f5f5f7', cor_primaria: '#d0ff00',
+  fonte_titulo: "'Space Grotesk', sans-serif",
+  fonte_texto: "'Inter', -apple-system, sans-serif",
+  sobre_titulo: '', sobre_texto: '', logos_clientes: '',
+  logo_url: null, banner1_url: null, bannermenor1_url: null, bannermenor2_url: null,
+};
+
 export default function Painel() {
   const [tab, setTab] = useState(() => {
     const hash = window.location.hash.replace('#', '');
@@ -107,15 +95,29 @@ export default function Painel() {
   });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   // ── State de cada entidade ────────────────────────────────────────────────
-  const [categorias, setCategorias]   = useState(MOCK.categorias);
-  const [produtos, setProdutos]       = useState(MOCK.produtos);
-  const [servicos, setServicos]       = useState(MOCK.servicos);
-  const [leads]                       = useState(MOCK.leads);
-  const [agenda, setAgenda]           = useState(MOCK.agenda);
-  const [config, setConfig]           = useState(MOCK.config);
-  const [blogPosts, setBlogPosts]     = useState(MOCK.blogPosts);
+  const [categorias, setCategorias] = useState([]);
+  const [catLoading, setCatLoading] = useState(false);
+
+  const [produtos, setProdutos] = useState([]);
+  const [prodLoading, setProdLoading] = useState(false);
+
+  const [servicos, setServicos] = useState([]);
+  const [servLoading, setServLoading] = useState(false);
+
+  const [leads, setLeads] = useState([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+
+  const [agenda, setAgenda] = useState([]);
+  const [agendaLoading, setAgendaLoading] = useState(false);
+
+  const [config, setConfig] = useState(CONFIG_DEFAULT);
+  const [configLoading, setConfigLoading] = useState(false);
+
+  const [blogPosts, setBlogPosts] = useState([]);
+  const [blogLoading, setBlogLoading] = useState(false);
 
   // ── Modais ────────────────────────────────────────────────────────────────
   const [catModal, setCatModal]         = useState(false);
@@ -146,103 +148,213 @@ export default function Painel() {
     setMobileOpen(false);
   }
 
+  // ── Carregamento de dados por aba ─────────────────────────────────────────
+  const loadCategorias = useCallback(async () => {
+    setCatLoading(true);
+    try { setCategorias(await getCategorias()); }
+    catch { showToast('Erro ao carregar seções.', 'error'); }
+    finally { setCatLoading(false); }
+  }, []);
+
+  const loadProdutos = useCallback(async () => {
+    setProdLoading(true);
+    try { setProdutos(await getCases()); }
+    catch { showToast('Erro ao carregar projetos.', 'error'); }
+    finally { setProdLoading(false); }
+  }, []);
+
+  const loadServicos = useCallback(async () => {
+    setServLoading(true);
+    try { setServicos(await getServicos()); }
+    catch { showToast('Erro ao carregar serviços.', 'error'); }
+    finally { setServLoading(false); }
+  }, []);
+
+  const loadLeads = useCallback(async () => {
+    setLeadsLoading(true);
+    try { setLeads(await getLeads()); }
+    catch { showToast('Erro ao carregar leads.', 'error'); }
+    finally { setLeadsLoading(false); }
+  }, []);
+
+  const loadAgenda = useCallback(async () => {
+    setAgendaLoading(true);
+    try { setAgenda(await getAgenda()); }
+    catch { showToast('Erro ao carregar agenda.', 'error'); }
+    finally { setAgendaLoading(false); }
+  }, []);
+
+  const loadConfig = useCallback(async () => {
+    setConfigLoading(true);
+    try { setConfig(c => ({ ...CONFIG_DEFAULT, ...(c || {}), ...await getConfig() })); }
+    catch { showToast('Erro ao carregar configurações.', 'error'); }
+    finally { setConfigLoading(false); }
+  }, []);
+
+  const loadBlog = useCallback(async () => {
+    setBlogLoading(true);
+    try { setBlogPosts(await getBlogPosts()); }
+    catch { showToast('Erro ao carregar posts.', 'error'); }
+    finally { setBlogLoading(false); }
+  }, []);
+
+  // Carrega dados sempre que muda de aba
+  useEffect(() => {
+    if (tab === 'categorias') loadCategorias();
+    if (tab === 'produtos')   { loadProdutos(); loadCategorias(); }
+    if (tab === 'servicos')   loadServicos();
+    if (tab === 'inscritos')  loadLeads();
+    if (tab === 'agenda')     loadAgenda();
+    if (tab === 'blog')       loadBlog();
+    if (['sobre','visual','config'].includes(tab)) loadConfig();
+  }, [tab]);
+
   // ── CRUD Categorias ───────────────────────────────────────────────────────
   function openNovaCat() { setCatForm({ id:'', nome:'' }); setCatModal(true); }
   function openEditCat(cat) { setCatForm({ id: cat.id, nome: cat.nome }); setCatModal(true); }
-  function saveCat() {
-    if (catForm.id) {
-      setCategorias(prev => prev.map(c => c.id === catForm.id ? { ...c, nome: catForm.nome, slug: catForm.nome.toLowerCase().replace(/\s+/g,'-') } : c));
-    } else {
-      const newCat = { id: Date.now().toString(), nome: catForm.nome, slug: catForm.nome.toLowerCase().replace(/\s+/g,'-') };
-      setCategorias(prev => [...prev, newCat]);
-    }
-    setCatModal(false);
-    showToast('Seção salva!');
+  async function saveCat() {
+    setSaving(true);
+    try {
+      const slug = catForm.nome.toLowerCase().replace(/\s+/g,'-');
+      if (catForm.id) {
+        const updated = await updateCategoria(catForm.id, { nome: catForm.nome, slug });
+        setCategorias(prev => prev.map(c => c.id === catForm.id ? updated : c));
+      } else {
+        const created = await createCategoria({ nome: catForm.nome, slug });
+        setCategorias(prev => [...prev, created]);
+      }
+      setCatModal(false);
+      showToast('Seção salva!');
+    } catch { showToast('Erro ao salvar seção.', 'error'); }
+    finally { setSaving(false); }
   }
-  function deleteCat(id) {
+  async function deleteCat(id) {
     if (!confirm('Excluir esta seção?')) return;
-    setCategorias(prev => prev.filter(c => c.id !== id));
-    showToast('Seção excluída.', 'error');
+    try {
+      await deleteCategoria(id);
+      setCategorias(prev => prev.filter(c => c.id !== id));
+      showToast('Seção excluída.', 'error');
+    } catch { showToast('Erro ao excluir seção.', 'error'); }
   }
 
   // ── CRUD Produtos ─────────────────────────────────────────────────────────
   function openNovoProd() { setProdForm({ id:'', nome:'', categoria_id:'', estoque:'', sort:0, descricao:'', link_projeto:'', whatsapp_projeto:'' }); setProdModal(true); }
   function openEditProd(prod) { setProdForm({ ...prod, sort: prod.sort || 0 }); setProdModal(true); }
-  function saveProd() {
-    if (prodForm.id) {
-      setProdutos(prev => prev.map(p => p.id === prodForm.id ? { ...prodForm } : p));
-    } else {
-      setProdutos(prev => [...prev, { ...prodForm, id: Date.now().toString() }]);
-    }
-    setProdModal(false);
-    showToast('Projeto salvo!');
+  async function saveProd() {
+    setSaving(true);
+    try {
+      if (prodForm.id) {
+        const updated = await updateCase(prodForm.id, prodForm);
+        setProdutos(prev => prev.map(p => p.id === prodForm.id ? updated : p));
+      } else {
+        const created = await createCase(prodForm);
+        setProdutos(prev => [...prev, created]);
+      }
+      setProdModal(false);
+      showToast('Projeto salvo!');
+    } catch { showToast('Erro ao salvar projeto.', 'error'); }
+    finally { setSaving(false); }
   }
-  function deleteProd(id) {
+  async function deleteProd(id) {
     if (!confirm('Excluir este projeto?')) return;
-    setProdutos(prev => prev.filter(p => p.id !== id));
-    showToast('Projeto excluído.', 'error');
+    try {
+      await deleteCase(id);
+      setProdutos(prev => prev.filter(p => p.id !== id));
+      showToast('Projeto excluído.', 'error');
+    } catch { showToast('Erro ao excluir projeto.', 'error'); }
   }
 
   // ── CRUD Serviços ─────────────────────────────────────────────────────────
   function openNovoServico() { setServicoForm({ id:'', titulo:'', resumo:'' }); setServicoModal(true); }
   function openEditServico(s) { setServicoForm({ ...s }); setServicoModal(true); }
-  function saveServico() {
-    if (servicoForm.id) {
-      setServicos(prev => prev.map(s => s.id === servicoForm.id ? { ...servicoForm } : s));
-    } else {
-      setServicos(prev => [...prev, { ...servicoForm, id: Date.now().toString() }]);
-    }
-    setServicoModal(false);
-    showToast('Serviço salvo!');
+  async function saveServico() {
+    setSaving(true);
+    try {
+      if (servicoForm.id) {
+        const updated = await updateServico(servicoForm.id, servicoForm);
+        setServicos(prev => prev.map(s => s.id === servicoForm.id ? updated : s));
+      } else {
+        const created = await createServico(servicoForm);
+        setServicos(prev => [...prev, created]);
+      }
+      setServicoModal(false);
+      showToast('Serviço salvo!');
+    } catch { showToast('Erro ao salvar serviço.', 'error'); }
+    finally { setSaving(false); }
   }
-  function deleteServico(id) {
+  async function deleteServico(id) {
     if (!confirm('Excluir este serviço?')) return;
-    setServicos(prev => prev.filter(s => s.id !== id));
-    showToast('Serviço excluído.', 'error');
+    try {
+      await deleteServico(id);
+      setServicos(prev => prev.filter(s => s.id !== id));
+      showToast('Serviço excluído.', 'error');
+    } catch { showToast('Erro ao excluir serviço.', 'error'); }
   }
 
   // ── CRUD Agenda ───────────────────────────────────────────────────────────
   function openNovoHorario() { setAgendaForm({ id:'', data_hora:'', disponivel:true, cliente_nome:'' }); setAgendaModal(true); }
   function openEditHorario(h) { setAgendaForm({ ...h, data_hora: h.data_hora?.substring(0,16).replace(' ','T') || '' }); setAgendaModal(true); }
-  function saveHorario() {
-    if (agendaForm.id) {
-      setAgenda(prev => prev.map(h => h.id === agendaForm.id ? { ...agendaForm } : h));
-    } else {
-      setAgenda(prev => [...prev, { ...agendaForm, id: Date.now().toString() }]);
-    }
-    setAgendaModal(false);
-    showToast('Horário salvo!');
+  async function saveHorario() {
+    setSaving(true);
+    try {
+      if (agendaForm.id) {
+        const updated = await updateHorario(agendaForm.id, agendaForm);
+        setAgenda(prev => prev.map(h => h.id === agendaForm.id ? updated : h));
+      } else {
+        const created = await createHorario(agendaForm);
+        setAgenda(prev => [...prev, created]);
+      }
+      setAgendaModal(false);
+      showToast('Horário salvo!');
+    } catch { showToast('Erro ao salvar horário.', 'error'); }
+    finally { setSaving(false); }
   }
-  function deleteHorario(id) {
+  async function deleteHorario(id) {
     if (!confirm('Excluir este horário?')) return;
-    setAgenda(prev => prev.filter(h => h.id !== id));
-    showToast('Horário excluído.', 'error');
+    try {
+      await deleteHorario(id);
+      setAgenda(prev => prev.filter(h => h.id !== id));
+      showToast('Horário excluído.', 'error');
+    } catch { showToast('Erro ao excluir horário.', 'error'); }
   }
 
   // ── CRUD Blog ─────────────────────────────────────────────────────────────
   function openNovoBlog() { setBlogForm({ id:'', titulo:'', slug:'', resumo:'', conteudo:'', imagem_capa:'', data_publicacao: new Date().toISOString().split('T')[0] }); setBlogModal(true); }
   function openEditBlog(post) { setBlogForm({ ...post }); setBlogModal(true); }
-  function saveBlog() {
+  async function saveBlog() {
+    setSaving(true);
     const slug = blogForm.slug || blogForm.titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
-    if (blogForm.id) {
-      setBlogPosts(prev => prev.map(p => p.id === blogForm.id ? { ...blogForm, slug } : p));
-    } else {
-      setBlogPosts(prev => [...prev, { ...blogForm, slug, id: Date.now().toString() }]);
-    }
-    setBlogModal(false);
-    showToast('Post salvo!');
+    try {
+      if (blogForm.id) {
+        const updated = await updateBlogPost(blogForm.id, { ...blogForm, slug });
+        setBlogPosts(prev => prev.map(p => p.id === blogForm.id ? updated : p));
+      } else {
+        const created = await createBlogPost({ ...blogForm, slug });
+        setBlogPosts(prev => [...prev, created]);
+      }
+      setBlogModal(false);
+      showToast('Post salvo!');
+    } catch { showToast('Erro ao salvar post.', 'error'); }
+    finally { setSaving(false); }
   }
-  function deleteBlog(id) {
+  async function deleteBlog(id) {
     if (!confirm('Excluir este post?')) return;
-    setBlogPosts(prev => prev.filter(p => p.id !== id));
-    showToast('Post excluído.', 'error');
+    try {
+      await deleteBlogPost(id);
+      setBlogPosts(prev => prev.filter(p => p.id !== id));
+      showToast('Post excluído.', 'error');
+    } catch { showToast('Erro ao excluir post.', 'error'); }
   }
 
   // ── Salvar configurações ──────────────────────────────────────────────────
-  function saveConfig(e) {
+  async function saveConfig(e) {
     e.preventDefault();
-    showToast('Configurações salvas!');
-    // TODO: chamar updateConfig(config) de lib/api.js
+    setSaving(true);
+    try {
+      await updateConfig(config);
+      showToast('Configurações salvas!');
+    } catch { showToast('Erro ao salvar configurações.', 'error'); }
+    finally { setSaving(false); }
   }
 
   return (
@@ -262,7 +374,7 @@ export default function Painel() {
       <nav className="bg-neutral-900 shadow-sm fixed w-full z-10 top-0 border-b border-neutral-800">
         <div className="w-full container mx-auto flex flex-wrap items-center justify-between mt-0 py-4 px-6">
           <span className="text-white text-xl font-bold flex items-center gap-2">
-            <Film size={20} className="text-yellow-400" /> Painel Produtora: {config.nome}
+            <Film size={20} className="text-yellow-400" /> Painel Produtora: {config.nome || 'Creapes'}
           </span>
           <div className="flex items-center gap-4">
             <a href="/" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-yellow-400 flex items-center gap-1 text-sm font-bold">
@@ -317,7 +429,8 @@ export default function Painel() {
               </div>
               <div className="bg-neutral-800 rounded-lg border border-neutral-700">
                 <ul className="divide-y divide-neutral-700">
-                  {categorias.length === 0 && <li className="p-6 text-center text-gray-500">Nenhuma seção cadastrada.</li>}
+                  {catLoading && <li className="p-6 text-center text-gray-500 flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> Carregando...</li>}
+                  {!catLoading && categorias.length === 0 && <li className="p-6 text-center text-gray-500">Nenhuma seção cadastrada.</li>}
                   {categorias.map(cat => (
                     <li key={cat.id} className="flex items-center justify-between p-4 hover:bg-neutral-700 transition-colors">
                       <div className="flex items-center gap-3">
@@ -352,7 +465,8 @@ export default function Painel() {
                     </tr>
                   </thead>
                   <tbody className="bg-neutral-800 divide-y divide-neutral-700">
-                    {produtos.length === 0 && <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Nenhum vídeo cadastrado.</td></tr>}
+                    {prodLoading && <LoadingRow cols={5} />}
+                    {!prodLoading && produtos.length === 0 && <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Nenhum vídeo cadastrado.</td></tr>}
                     {produtos.map(prod => (
                       <tr key={prod.id} className="hover:bg-neutral-700 transition-colors">
                         <td className="px-6 py-4 text-sm text-gray-400 font-bold">{prod.sort || 0}</td>
@@ -379,7 +493,8 @@ export default function Painel() {
                 <button onClick={openNovoServico} className={btnPrimary}><Plus size={16} /> Novo Serviço</button>
               </div>
               <div className="bg-neutral-800 rounded-lg border border-neutral-700 divide-y divide-neutral-700">
-                {servicos.length === 0 && <div className="p-6 text-center text-gray-500">Nenhum serviço cadastrado.</div>}
+                {servLoading && <div className="p-6 text-center text-gray-500 flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> Carregando...</div>}
+                {!servLoading && servicos.length === 0 && <div className="p-6 text-center text-gray-500">Nenhum serviço cadastrado.</div>}
                 {servicos.map(s => (
                   <div key={s.id} className="p-4 flex justify-between items-center hover:bg-neutral-700 transition-colors">
                     <div>
@@ -413,7 +528,8 @@ export default function Painel() {
                     </tr>
                   </thead>
                   <tbody className="bg-neutral-800 divide-y divide-neutral-700">
-                    {blogPosts.length === 0 && <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">Nenhum post cadastrado.</td></tr>}
+                    {blogLoading && <LoadingRow cols={4} />}
+                    {!blogLoading && blogPosts.length === 0 && <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">Nenhum post cadastrado.</td></tr>}
                     {blogPosts.map(post => (
                       <tr key={post.id} className="hover:bg-neutral-700 transition-colors">
                         <td className="px-6 py-4 font-bold text-white text-sm">{post.titulo}</td>
@@ -445,12 +561,13 @@ export default function Painel() {
                     </tr>
                   </thead>
                   <tbody className="bg-neutral-800 divide-y divide-neutral-700">
-                    {leads.length === 0 && <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">Nenhum lead inscrito ainda.</td></tr>}
+                    {leadsLoading && <LoadingRow cols={4} />}
+                    {!leadsLoading && leads.length === 0 && <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">Nenhum lead inscrito ainda.</td></tr>}
                     {leads.map(lead => (
                       <tr key={lead.id} className="hover:bg-neutral-700 transition-colors">
                         <td className="px-6 py-4 text-sm font-bold text-white">{lead.nome}</td>
                         <td className="px-6 py-4 text-sm">
-                          <a href={`https://wa.me/55${lead.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="text-green-400 hover:text-green-300 flex items-center gap-1">
+                          <a href={`https://wa.me/55${lead.whatsapp?.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="text-green-400 hover:text-green-300 flex items-center gap-1">
                             <MessageCircle size={14} /> {lead.whatsapp}
                           </a>
                         </td>
@@ -481,7 +598,8 @@ export default function Painel() {
                     </tr>
                   </thead>
                   <tbody className="bg-neutral-800 divide-y divide-neutral-700">
-                    {agenda.length === 0 && <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">Nenhum horário cadastrado.</td></tr>}
+                    {agendaLoading && <LoadingRow cols={4} />}
+                    {!agendaLoading && agenda.length === 0 && <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">Nenhum horário cadastrado.</td></tr>}
                     {agenda.map(h => (
                       <tr key={h.id} className="hover:bg-neutral-700 transition-colors">
                         <td className="px-6 py-4 text-sm font-bold text-white">{h.data_hora?.replace('T',' ')}</td>
@@ -507,25 +625,31 @@ export default function Painel() {
           {tab === 'sobre' && (
             <form onSubmit={saveConfig} className="bg-neutral-900 rounded-lg shadow-sm border border-neutral-800 p-6 space-y-6">
               <h2 className="text-2xl font-bold text-white flex items-center gap-2 mb-6"><Users size={20} className="text-yellow-400" /> Sobre a Produtora</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                  <Field label="Título da Seção">
-                    <input type="text" className={inputCls} value={config.sobre_titulo} onChange={e => setConfig(c => ({...c, sobre_titulo: e.target.value}))} placeholder="Ex: We Are Creapes" />
-                  </Field>
+              {configLoading ? (
+                <div className="py-10 text-center text-gray-500 flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> Carregando...</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <Field label="Título da Seção">
+                      <input type="text" className={inputCls} value={config.sobre_titulo || ''} onChange={e => setConfig(c => ({...c, sobre_titulo: e.target.value}))} placeholder="Ex: We Are Creapes" />
+                    </Field>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Field label="Manifesto / Texto Principal">
+                      <textarea rows={4} className={inputCls} value={config.sobre_texto || ''} onChange={e => setConfig(c => ({...c, sobre_texto: e.target.value}))} />
+                    </Field>
+                  </div>
+                  <div className="md:col-span-2 bg-neutral-800 p-4 rounded border border-neutral-700">
+                    <h4 className="font-bold text-yellow-400 text-sm mb-3">Logos dos Clientes</h4>
+                    <textarea rows={4} className="w-full bg-neutral-900 border border-neutral-700 rounded p-2 text-white focus:border-yellow-500 outline-none" value={config.logos_clientes || ''} onChange={e => setConfig(c => ({...c, logos_clientes: e.target.value}))} placeholder="Cole os links das imagens aqui (um por linha)..." />
+                    <p className="text-xs text-gray-400 mt-1">Insira a URL direta da imagem (uma por linha).</p>
+                  </div>
                 </div>
-                <div className="md:col-span-2">
-                  <Field label="Manifesto / Texto Principal">
-                    <textarea rows={4} className={inputCls} value={config.sobre_texto} onChange={e => setConfig(c => ({...c, sobre_texto: e.target.value}))} />
-                  </Field>
-                </div>
-                <div className="md:col-span-2 bg-neutral-800 p-4 rounded border border-neutral-700">
-                  <h4 className="font-bold text-yellow-400 text-sm mb-3">Logos dos Clientes</h4>
-                  <textarea rows={4} className="w-full bg-neutral-900 border border-neutral-700 rounded p-2 text-white focus:border-yellow-500 outline-none" value={config.logos_clientes} onChange={e => setConfig(c => ({...c, logos_clientes: e.target.value}))} placeholder="Cole os links das imagens aqui (um por linha)..." />
-                  <p className="text-xs text-gray-400 mt-1">Insira a URL direta da imagem (uma por linha).</p>
-                </div>
-              </div>
+              )}
               <div className="flex justify-end pt-4">
-                <button type="submit" className={btnSave}><Save size={16} /> Salvar</button>
+                <button type="submit" className={btnSave} disabled={saving || configLoading}>
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Salvar
+                </button>
               </div>
             </form>
           )}
@@ -534,49 +658,55 @@ export default function Painel() {
           {tab === 'visual' && (
             <form onSubmit={saveConfig} className="bg-neutral-900 rounded-lg shadow-sm border border-neutral-800 p-6 space-y-6">
               <h2 className="text-2xl font-bold text-white flex items-center gap-2 mb-6"><Palette size={20} className="text-yellow-400" /> Identidade Visual</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[['cor_fundo','Cor do Fundo'],['cor_texto','Cor do Texto']].map(([field, label]) => (
-                  <div key={field}>
-                    <Field label={label}>
-                      <div className="flex items-center gap-2">
-                        <input type="color" value={config[field]} onChange={e => setConfig(c => ({...c, [field]: e.target.value}))} className="h-10 w-14 p-0 border border-neutral-700 rounded cursor-pointer bg-neutral-800" />
-                        <input type="text" value={config[field]} onChange={e => setConfig(c => ({...c, [field]: e.target.value}))} className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-white text-sm uppercase" />
+              {configLoading ? (
+                <div className="py-10 text-center text-gray-500 flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> Carregando...</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[['cor_fundo','Cor do Fundo'],['cor_texto','Cor do Texto']].map(([field, label]) => (
+                    <div key={field}>
+                      <Field label={label}>
+                        <div className="flex items-center gap-2">
+                          <input type="color" value={config[field] || '#000000'} onChange={e => setConfig(c => ({...c, [field]: e.target.value}))} className="h-10 w-14 p-0 border border-neutral-700 rounded cursor-pointer bg-neutral-800" />
+                          <input type="text" value={config[field] || ''} onChange={e => setConfig(c => ({...c, [field]: e.target.value}))} className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-white text-sm uppercase" />
+                        </div>
+                      </Field>
+                    </div>
+                  ))}
+                  <div className="md:col-span-2">
+                    <Field label="Cor Destaque (Accent)">
+                      <div className="flex items-center gap-2 md:w-1/2">
+                        <input type="color" value={config.cor_primaria || '#d0ff00'} onChange={e => setConfig(c => ({...c, cor_primaria: e.target.value}))} className="h-10 w-14 p-0 border border-neutral-700 rounded cursor-pointer bg-neutral-800" />
+                        <input type="text" value={config.cor_primaria || ''} onChange={e => setConfig(c => ({...c, cor_primaria: e.target.value}))} className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-white text-sm uppercase" />
                       </div>
                     </Field>
                   </div>
-                ))}
-                <div className="md:col-span-2">
-                  <Field label="Cor Destaque (Accent)">
-                    <div className="flex items-center gap-2 md:w-1/2">
-                      <input type="color" value={config.cor_primaria} onChange={e => setConfig(c => ({...c, cor_primaria: e.target.value}))} className="h-10 w-14 p-0 border border-neutral-700 rounded cursor-pointer bg-neutral-800" />
-                      <input type="text" value={config.cor_primaria} onChange={e => setConfig(c => ({...c, cor_primaria: e.target.value}))} className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-white text-sm uppercase" />
-                    </div>
-                  </Field>
+                  <div>
+                    <Field label="Fonte dos Títulos">
+                      <select className={inputCls} value={config.fonte_titulo || ''} onChange={e => setConfig(c => ({...c, fonte_titulo: e.target.value}))}>
+                        <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
+                        <option value="'Inter', sans-serif">Inter</option>
+                        <option value="'Playfair Display', serif">Playfair Display</option>
+                        <option value="'Montserrat', sans-serif">Montserrat</option>
+                        <option value="'Oswald', sans-serif">Oswald</option>
+                      </select>
+                    </Field>
+                  </div>
+                  <div>
+                    <Field label="Fonte dos Textos">
+                      <select className={inputCls} value={config.fonte_texto || ''} onChange={e => setConfig(c => ({...c, fonte_texto: e.target.value}))}>
+                        <option value="'Inter', -apple-system, sans-serif">Inter</option>
+                        <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
+                        <option value="'Roboto', sans-serif">Roboto</option>
+                        <option value="'Lora', serif">Lora</option>
+                      </select>
+                    </Field>
+                  </div>
                 </div>
-                <div>
-                  <Field label="Fonte dos Títulos">
-                    <select className={inputCls} value={config.fonte_titulo} onChange={e => setConfig(c => ({...c, fonte_titulo: e.target.value}))}>
-                      <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
-                      <option value="'Inter', sans-serif">Inter</option>
-                      <option value="'Playfair Display', serif">Playfair Display</option>
-                      <option value="'Montserrat', sans-serif">Montserrat</option>
-                      <option value="'Oswald', sans-serif">Oswald</option>
-                    </select>
-                  </Field>
-                </div>
-                <div>
-                  <Field label="Fonte dos Textos">
-                    <select className={inputCls} value={config.fonte_texto} onChange={e => setConfig(c => ({...c, fonte_texto: e.target.value}))}>
-                      <option value="'Inter', -apple-system, sans-serif">Inter</option>
-                      <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
-                      <option value="'Roboto', sans-serif">Roboto</option>
-                      <option value="'Lora', serif">Lora</option>
-                    </select>
-                  </Field>
-                </div>
-              </div>
+              )}
               <div className="flex justify-end pt-4">
-                <button type="submit" className={btnSave}><Save size={16} /> Salvar</button>
+                <button type="submit" className={btnSave} disabled={saving || configLoading}>
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Salvar
+                </button>
               </div>
             </form>
           )}
@@ -585,24 +715,30 @@ export default function Painel() {
           {tab === 'config' && (
             <form onSubmit={saveConfig} className="bg-neutral-900 rounded-lg shadow-sm border border-neutral-800 p-6 space-y-6">
               <h2 className="text-2xl font-bold text-white flex items-center gap-2 mb-6"><Settings size={20} className="text-yellow-400" /> Configurações Base</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Field label="Nome da Produtora">
-                  <input type="text" className={inputCls} value={config.nome} onChange={e => setConfig(c => ({...c, nome: e.target.value}))} />
-                </Field>
-                <Field label="WhatsApp Comercial (Apenas números)">
-                  <input type="text" className={inputCls} value={config.whatsapp_comercial} onChange={e => setConfig(c => ({...c, whatsapp_comercial: e.target.value}))} />
-                </Field>
-                <Field label="Link do Instagram">
-                  <input type="text" className={inputCls} value={config.instagram_url} onChange={e => setConfig(c => ({...c, instagram_url: e.target.value}))} placeholder="https://instagram.com/suaempresa" />
-                </Field>
-              </div>
+              {configLoading ? (
+                <div className="py-10 text-center text-gray-500 flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> Carregando...</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Field label="Nome da Produtora">
+                    <input type="text" className={inputCls} value={config.nome || ''} onChange={e => setConfig(c => ({...c, nome: e.target.value}))} />
+                  </Field>
+                  <Field label="WhatsApp Comercial (Apenas números)">
+                    <input type="text" className={inputCls} value={config.whatsapp_comercial || ''} onChange={e => setConfig(c => ({...c, whatsapp_comercial: e.target.value}))} />
+                  </Field>
+                  <Field label="Link do Instagram">
+                    <input type="text" className={inputCls} value={config.instagram_url || ''} onChange={e => setConfig(c => ({...c, instagram_url: e.target.value}))} placeholder="https://instagram.com/suaempresa" />
+                  </Field>
+                </div>
+              )}
               <div className="pt-4 border-t border-neutral-800">
                 <Field label="Nova Senha do Painel">
                   <input type="password" className={`${inputCls} md:w-1/2`} placeholder="Deixe em branco para manter a atual" />
                 </Field>
               </div>
               <div className="flex justify-end pt-4">
-                <button type="submit" className={btnSave}><Save size={16} /> Salvar</button>
+                <button type="submit" className={btnSave} disabled={saving || configLoading}>
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Salvar
+                </button>
               </div>
             </form>
           )}
@@ -620,7 +756,9 @@ export default function Painel() {
           </Field>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className={btnCancel} onClick={() => setCatModal(false)}>Cancelar</button>
-            <button type="button" className="px-4 bg-yellow-500 p-2 rounded text-black font-bold hover:bg-yellow-600" onClick={saveCat}>Salvar</button>
+            <button type="button" className="px-4 bg-yellow-500 p-2 rounded text-black font-bold hover:bg-yellow-600 flex items-center gap-2" onClick={saveCat} disabled={saving}>
+              {saving ? <Loader2 size={14} className="animate-spin" /> : null} Salvar
+            </button>
           </div>
         </div>
       </Modal>
@@ -667,7 +805,9 @@ export default function Painel() {
           </div>
           <div className="flex justify-end gap-3 pt-6 border-t border-neutral-800">
             <button type="button" className={btnCancel} onClick={() => setProdModal(false)}>Cancelar</button>
-            <button type="button" className={btnSave} onClick={saveProd}><Save size={16} /> Salvar Projeto</button>
+            <button type="button" className={btnSave} onClick={saveProd} disabled={saving}>
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Salvar Projeto
+            </button>
           </div>
         </div>
       </Modal>
@@ -683,7 +823,9 @@ export default function Painel() {
           </Field>
           <div className="flex justify-end gap-3 pt-6 border-t border-neutral-800">
             <button type="button" className={btnCancel} onClick={() => setServicoModal(false)}>Cancelar</button>
-            <button type="button" className={btnSave} onClick={saveServico}><Save size={16} /> Salvar Serviço</button>
+            <button type="button" className={btnSave} onClick={saveServico} disabled={saving}>
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Salvar Serviço
+            </button>
           </div>
         </div>
       </Modal>
@@ -703,7 +845,9 @@ export default function Painel() {
           </Field>
           <div className="flex justify-end gap-2 pt-4 border-t border-neutral-800">
             <button type="button" className={btnCancel} onClick={() => setAgendaModal(false)}>Cancelar</button>
-            <button type="button" className="px-4 py-2 bg-yellow-500 rounded text-black font-bold hover:bg-yellow-600" onClick={saveHorario}>Salvar Horário</button>
+            <button type="button" className="px-4 py-2 bg-yellow-500 rounded text-black font-bold hover:bg-yellow-600 flex items-center gap-2" onClick={saveHorario} disabled={saving}>
+              {saving ? <Loader2 size={14} className="animate-spin" /> : null} Salvar Horário
+            </button>
           </div>
         </div>
       </Modal>
@@ -731,13 +875,13 @@ export default function Painel() {
           </Field>
           <div className="flex justify-end gap-3 pt-6 border-t border-neutral-800">
             <button type="button" className={btnCancel} onClick={() => setBlogModal(false)}>Cancelar</button>
-            <button type="button" className={btnSave} onClick={saveBlog}><Save size={16} /> Salvar Post</button>
+            <button type="button" className={btnSave} onClick={saveBlog} disabled={saving}>
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Salvar Post
+            </button>
           </div>
         </div>
       </Modal>
 
-      {/* Tailwind CDN (só dev — em prod usar plugin Vite) */}
-      <link rel="stylesheet" href="https://cdn.tailwindcss.com" />
     </div>
   );
 }
