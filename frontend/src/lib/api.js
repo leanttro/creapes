@@ -1,10 +1,9 @@
 /**
  * lib/api.js
  * Camada de comunicação com o backend FastAPI.
- * Por enquanto apenas assinaturas — implementar quando o backend estiver pronto.
  */
 
-const BASE = import.meta.env.VITE_API_BASE_URL || 'https://apicreapes.leanttro.com/api';
+const BASE = '/api';
 
 async function request(method, path, body) {
   const opts = {
@@ -46,8 +45,8 @@ export const updateHorario = (id, data) => request('PUT',    `/agenda/${id}`, da
 export const deleteHorario = (id)       => request('DELETE', `/agenda/${id}`);
 
 // ── Configurações da loja ───────────────────────────────────────────────────
-export const getConfig    = ()     => request('GET',  '/config');
-export const updateConfig = (data) => request('PUT',  '/config', data);
+export const getConfig    = ()     => request('GET', '/config');
+export const updateConfig = (data) => request('PUT', '/config', data);
 
 // ── Contato (formulário público) ─────────────────────────────────────────────
 export const enviarContato = (data) => request('POST', '/contato', data);
