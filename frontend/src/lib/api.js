@@ -4,7 +4,7 @@
  * Por enquanto apenas assinaturas — implementar quando o backend estiver pronto.
  */
 
-const BASE = '/api';
+const BASE = import.meta.env.VITE_API_BASE_URL || 'https://apicreapes.leanttro.com/api';
 
 async function request(method, path, body) {
   const opts = {
