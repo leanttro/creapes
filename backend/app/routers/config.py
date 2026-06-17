@@ -7,12 +7,12 @@ from app.models.schemas import ConfigSchema
 
 router = APIRouter(prefix="/config", tags=["config"])
 
-@router.get("/")
+@router.get("")
 async def obter(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Config).where(Config.id == 1))
     return result.scalar_one_or_none()
 
-@router.put("/")
+@router.put("")
 async def atualizar(data: ConfigSchema, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Config).where(Config.id == 1))
     c = result.scalar_one_or_none()
