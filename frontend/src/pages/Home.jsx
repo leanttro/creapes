@@ -140,7 +140,7 @@ export default function Home() {
       <div style={{ visibility: loaderDone ? 'visible' : 'hidden' }}>
         <Navbar nome={SITE.nome} logo={SITE.logo} />
 
-        <Hero videos={HERO_VIDEOS} />
+        <Hero slides={HERO_VIDEOS} />
 
         {CLIENT_LOGOS.length > 0 && (
           <Clientes logos={CLIENT_LOGOS} />
