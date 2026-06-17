@@ -186,7 +186,10 @@ export default function Painel() {
 
   const loadConfig = useCallback(async () => {
     setConfigLoading(true);
-    try { setConfig(c => ({ ...CONFIG_DEFAULT, ...(c || {}), ...await getConfig() })); }
+    try {
+      const data = await getConfig();
+      setConfig(c => ({ ...CONFIG_DEFAULT, ...(c || {}), ...data }));
+    }
     catch { showToast('Erro ao carregar configurações.', 'error'); }
     finally { setConfigLoading(false); }
   }, []);
@@ -282,7 +285,7 @@ export default function Painel() {
     } catch { showToast('Erro ao salvar serviço.', 'error'); }
     finally { setSaving(false); }
   }
-  async function deleteServico(id) {
+  async function handleDeleteServico(id) {
     if (!confirm('Excluir este serviço?')) return;
     try {
       await deleteServico(id);
@@ -309,7 +312,7 @@ export default function Painel() {
     } catch { showToast('Erro ao salvar horário.', 'error'); }
     finally { setSaving(false); }
   }
-  async function deleteHorario(id) {
+  async function handleDeleteHorario(id) {
     if (!confirm('Excluir este horário?')) return;
     try {
       await deleteHorario(id);
@@ -503,7 +506,7 @@ export default function Painel() {
                     </div>
                     <div className="flex items-center gap-2">
                       <button onClick={() => openEditServico(s)} className="text-blue-400 hover:text-blue-300 p-2"><Edit2 size={16} /></button>
-                      <button onClick={() => deleteServico(s.id)} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={16} /></button>
+                      <button onClick={() => handleDeleteServico(s.id)} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={16} /></button>
                     </div>
                   </div>
                 ))}
@@ -611,7 +614,7 @@ export default function Painel() {
                         <td className="px-6 py-4 text-sm text-gray-400">{h.cliente_nome || '--'}</td>
                         <td className="px-6 py-4 text-right text-sm font-medium">
                           <button onClick={() => openEditHorario(h)} className="text-blue-400 hover:text-blue-300 mr-3"><Edit2 size={16} /></button>
-                          <button onClick={() => deleteHorario(h.id)} className="text-red-500 hover:text-red-400"><Trash2 size={16} /></button>
+                          <button onClick={() => handleDeleteHorario(h.id)} className="text-red-500 hover:text-red-400"><Trash2 size={16} /></button>
                         </td>
                       </tr>
                     ))}
