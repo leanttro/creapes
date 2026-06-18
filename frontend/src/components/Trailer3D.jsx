@@ -6,51 +6,28 @@ import * as THREE from 'three';
  * que avança conforme o scroll, e dois "steps" de conteúdo (showreel ->
  * call to action) que fazem cross-fade também conforme o scroll.
  *
- * Fidelidade ao original (r128 puro):
- * - 500 cubos com THREE.BoxGeometry(1,1,1) + MeshStandardMaterial,
- *   85% cor escura aleatória (#222/#111), 15% cor de destaque (#d0ff00).
- * - FogExp2(0x050505, 0.012), AmbientLight, DirectionalLight,
- *   PointLight pulsante (intensity = 1.5 + sin(t*2)).
- * - cameraC.position.z anima de 40 até -60 (40 - scrollPercent*100)
- *   conforme o scroll dentro da seção (350vh de altura, sticky no topo).
- *   cubesGroup roda em Y e Z proporcional ao scroll.
- * - step-1 (showreel/iframe) e step-2 (CTA) cross-fade exatamente nos
- *   mesmos thresholds de scrollPercent (0.5 é o ponto de troca).
- * - Cada cubo individualmente gira e flutua (sin(time+i)) no loop de
- *   animação, mesma fórmula do original.
- *
- * REGRAS DE PERFORMANCE (obrigatórias) aplicadas aqui:
+ * REGRAS DE PERFORMANCE aplicadas:
  * 1. IntersectionObserver pausa o requestAnimationFrame quando a seção
- *    sai da viewport (isInViewRef) — o loop simplesmente não agenda o
- *    próximo frame enquanto fora de vista, e retoma quando volta.
- * 2. renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)) —
- *    nunca usa o devicePixelRatio puro.
- * 3. O listener de scroll roda via requestAnimationFrame throttle
- *    (rafScheduledRef), nunca executando a lógica pesada (cálculo de
- *    câmera/opacidade) direto no evento de scroll.
- * 4. Lazy loading: a cena Three.js (geometrias, materiais, renderer)
- *    só é inicializada quando a seção está perto da viewport — usamos
- *    um segundo IntersectionObserver com rootMargin para "montar" a
- *    cena só quando o usuário está perto, evitando custo de WebGL
- *    upfront em quem nunca rola até lá.
- * 5. Cleanup completo no retorno do useEffect: cancelAnimationFrame,
- *    removeEventListener (scroll/resize), disconnect dos observers, e
- *    dispose de geometrias/materiais/renderer do Three.js para não
- *    vazar memória de GPU ao desmontar.
+ *    sai da viewport.
+ * 2. renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)).
+ * 3. Scroll via requestAnimationFrame throttle.
+ * 4. Lazy loading: cena Three.js só inicializada quando o usuário se
+ *    aproxima da seção.
+ * 5. Cleanup completo no retorno do useEffect.
+ * 6. [NOVO] visibilitychange: pausa o RAF quando a aba fica em background,
+ *    retoma quando volta — evita que a GPU continue trabalhando à toa.
  */
 export default function Trailer3D({
   vimeoEmbedUrl = 'https://player.vimeo.com/video/1176338391?h=9316747c6c&autoplay=1&loop=1&muted=1&title=0&byline=0&portrait=0',
 }) {
   const sectionRef = useRef(null);
-  const canvasRef = useRef(null);
-  const step1Ref = useRef(null);
-  const step2Ref = useRef(null);
+  const canvasRef  = useRef(null);
+  const step1Ref   = useRef(null);
+  const step2Ref   = useRef(null);
 
-  // Controla quando a cena pesada deve ser montada (lazy load por proximidade)
   const [shouldMount, setShouldMount] = useState(false);
 
-  // ── Lazy mount: observa a seção com margem generosa, só ativa a cena 3D
-  // quando o usuário está perto de chegar nela. ──
+  // ── Lazy mount ────────────────────────────────────────────────────────────
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
@@ -71,14 +48,14 @@ export default function Trailer3D({
     return () => mountObserver.disconnect();
   }, []);
 
-  // ── Cena Three.js: só roda depois que shouldMount vira true ──
+  // ── Cena Three.js ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!shouldMount) return;
 
     const section = sectionRef.current;
-    const canvas = canvasRef.current;
-    const step1 = step1Ref.current;
-    const step2 = step2Ref.current;
+    const canvas  = canvasRef.current;
+    const step1   = step1Ref.current;
+    const step2   = step2Ref.current;
     if (!section || !canvas) return;
 
     const scene = new THREE.Scene();
@@ -89,22 +66,17 @@ export default function Trailer3D({
 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    // REGRA DE PERFORMANCE 2: nunca usar devicePixelRatio puro, cap em 2.
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     const cubesGroup = new THREE.Group();
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const materials = []; // guardamos para dispose no cleanup
+    const geometry   = new THREE.BoxGeometry(1, 1, 1);
+    const materials  = [];
 
     for (let i = 0; i < 500; i++) {
       const isAccent = Math.random() > 0.85;
-      let cubeColor;
-
-      if (isAccent) {
-        cubeColor = 0xd0ff00;
-      } else {
-        cubeColor = Math.random() > 0.5 ? 0x222222 : 0x111111;
-      }
+      const cubeColor = isAccent
+        ? 0xd0ff00
+        : (Math.random() > 0.5 ? 0x222222 : 0x111111);
 
       const mat = new THREE.MeshStandardMaterial({
         color: cubeColor,
@@ -124,7 +96,6 @@ export default function Trailer3D({
       mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
       const scale = Math.random() * 2.5 + 0.5;
       mesh.scale.set(scale, scale, scale);
-
       cubesGroup.add(mesh);
     }
     scene.add(cubesGroup);
@@ -143,10 +114,9 @@ export default function Trailer3D({
     let scrollPercent = 0;
     const clock = new THREE.Clock();
 
-    // ── Cálculo pesado de scroll (câmera + opacidade dos steps) ──
     function updateFromScroll() {
-      const rect = section.getBoundingClientRect();
-      const sectionTop = rect.top;
+      const rect          = section.getBoundingClientRect();
+      const sectionTop    = rect.top;
       const sectionHeight = rect.height - window.innerHeight;
 
       if (sectionTop <= 0 && sectionTop >= -sectionHeight) {
@@ -157,33 +127,30 @@ export default function Trailer3D({
         scrollPercent = 1;
       }
 
-      camera.position.z = 40 - scrollPercent * 100;
-      cubesGroup.rotation.y = scrollPercent * Math.PI;
-      cubesGroup.rotation.z = scrollPercent * 0.5;
+      camera.position.z      = 40 - scrollPercent * 100;
+      cubesGroup.rotation.y  = scrollPercent * Math.PI;
+      cubesGroup.rotation.z  = scrollPercent * 0.5;
 
       if (step1 && step2) {
         if (scrollPercent < 0.5) {
-          step1.style.opacity = 1 - scrollPercent * 2.5;
-          step1.style.transform = `translateY(${scrollPercent * 150}px) scale(${1 + scrollPercent})`;
+          step1.style.opacity      = 1 - scrollPercent * 2.5;
+          step1.style.transform    = `translateY(${scrollPercent * 150}px) scale(${1 + scrollPercent})`;
           step1.style.pointerEvents = scrollPercent < 0.2 ? 'auto' : 'none';
-
-          step2.style.opacity = 0;
+          step2.style.opacity      = 0;
           step2.style.pointerEvents = 'none';
         } else {
-          step1.style.opacity = 0;
+          step1.style.opacity      = 0;
           step1.style.pointerEvents = 'none';
-
           let p = (scrollPercent - 0.5) * 2.5;
           if (p > 1) p = 1;
-
-          step2.style.opacity = p;
-          step2.style.transform = `translateY(${50 - p * 50}px)`;
+          step2.style.opacity       = p;
+          step2.style.transform     = `translateY(${50 - p * 50}px)`;
           step2.style.pointerEvents = p > 0.5 ? 'auto' : 'none';
         }
       }
     }
 
-    // REGRA DE PERFORMANCE 3: throttle do scroll via requestAnimationFrame.
+    // Throttle de scroll via rAF
     let rafScheduled = false;
     function onScroll() {
       if (rafScheduled) return;
@@ -202,13 +169,16 @@ export default function Trailer3D({
 
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onResize);
-
-    // Cálculo inicial (equivalente a já ter o estado correto ao montar)
     updateFromScroll();
 
-    // ── REGRA DE PERFORMANCE 1: pausa o RAF quando a seção sai da viewport ──
-    let isInView = true;
-    let rafId = null;
+    // ── RAF com duplo controle: viewport + visibilidade da aba ───────────────
+    let isInView   = true;
+    let isTabVisible = !document.hidden; // NOVO
+    let rafId      = null;
+
+    function shouldAnimate() {
+      return isInView && isTabVisible; // NOVO: só anima se na viewport E aba ativa
+    }
 
     function animate() {
       rafId = requestAnimationFrame(animate);
@@ -225,7 +195,7 @@ export default function Trailer3D({
     }
 
     function startAnimation() {
-      if (rafId === null) {
+      if (rafId === null && shouldAnimate()) {
         animate();
       }
     }
@@ -237,6 +207,18 @@ export default function Trailer3D({
       }
     }
 
+    // NOVO: pausa/retoma quando o usuário troca de aba
+    function onVisibilityChange() {
+      isTabVisible = !document.hidden;
+      if (isTabVisible) {
+        startAnimation();
+      } else {
+        stopAnimation();
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // Pausa/retoma baseado na viewport
     const visibilityObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -252,19 +234,15 @@ export default function Trailer3D({
     );
     visibilityObserver.observe(section);
 
-    // Inicia o loop (a seção acabou de ser montada via lazy load, então
-    // está presumivelmente visível ou prestes a ficar — o observer acima
-    // assume o controle a partir do primeiro callback).
     startAnimation();
 
-    // ── CLEANUP: cancela RAF, remove listeners, desconecta observer,
-    // e libera geometria/materiais/renderer da GPU. ──
+    // ── Cleanup completo ──────────────────────────────────────────────────────
     return () => {
       stopAnimation();
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onResize);
+      document.removeEventListener('visibilitychange', onVisibilityChange); // NOVO
       visibilityObserver.disconnect();
-
       geometry.dispose();
       materials.forEach((mat) => mat.dispose());
       renderer.dispose();
