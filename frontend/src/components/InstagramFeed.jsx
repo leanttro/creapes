@@ -1,26 +1,30 @@
 import { useRef } from 'react';
 
 // Props:
-// posts: array de { embedUrl: string } — URLs de posts do Instagram para embed
-// Valores de exemplo fixos; conectar ao backend depois via lib/api.js
-const DEFAULT_POSTS = [
-  { embedUrl: 'https://www.instagram.com/p/exemplo1/embed' },
-  { embedUrl: 'https://www.instagram.com/p/exemplo2/embed' },
-  { embedUrl: 'https://www.instagram.com/p/exemplo3/embed' },
-  { embedUrl: 'https://www.instagram.com/p/exemplo4/embed' },
-  { embedUrl: 'https://www.instagram.com/p/exemplo5/embed' },
-];
+// logosClientes: string com URLs separadas por linha/espaço (campo logos_clientes do banco)
+// Filtra apenas os links do instagram.com, converte para embed e exibe no carrossel
 
-export default function InstagramFeed({ posts = DEFAULT_POSTS }) {
+function toEmbedUrl(url) {
+  // Normaliza: remove /embed se já tiver, remove query string, remove trailing slash
+  const clean = url.trim().split('?')[0].replace(/\/embed\/?$/, '').replace(/\/$/, '');
+  return clean + '/embed';
+}
+
+export default function InstagramFeed({ logosClientes = '' }) {
   const trackRef = useRef(null);
+
+  // Filtra só links do instagram
+  const posts = (logosClientes || '')
+    .split(/[\n\s]+/)
+    .map(l => l.trim())
+    .filter(l => l && l.includes('instagram.com'));
 
   function scrollInsta(direction) {
     if (!trackRef.current) return;
     trackRef.current.scrollBy({ left: direction * 340, behavior: 'smooth' });
   }
 
-  // Se não há posts, não renderiza a seção
-  if (!posts || posts.length === 0) return null;
+  if (posts.length === 0) return null;
 
   return (
     <section className="insta-feed-wrapper fade-in">
@@ -38,10 +42,10 @@ export default function InstagramFeed({ posts = DEFAULT_POSTS }) {
         </button>
 
         <div className="insta-track" id="insta-track" ref={trackRef}>
-          {posts.map((post, i) => (
+          {posts.map((url, i) => (
             <div className="insta-card" key={i}>
               <iframe
-                src={post.embedUrl}
+                src={toEmbedUrl(url)}
                 width="100%"
                 height="540"
                 frameBorder="0"
