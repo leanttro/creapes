@@ -2,49 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { getCases, getConfig } from '../lib/api';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// ── Dados mockados (substituir por fetch via lib/api.js depois) ──────────────
-const MOCK_CASES = {
-  '1': {
-    id: '1',
-    nome: 'Showreel 2024',
-    descricao: 'Motion Design · São Paulo',
-    resumo: 'Este projeto representa o melhor da produção audiovisual de alto impacto — cada quadro cuidadosamente planejado para criar experiências visuais que ficam na memória do espectador.',
-    categoria: { nome: 'Showreel' },
-    link_projeto: 'https://vimeo.com/1176338391',
-    imagem: 'https://images.unsplash.com/photo-1536240478700-b869ad10e128?w=1920',
-    depoimento: 'Cada projeto é uma oportunidade de contar uma história que ressoa — visualmente, emocionalmente, para sempre.',
-    ficha_tecnica: 'Produção realizada com equipamentos de última geração, equipe especializada e processos criativos que garantem o mais alto padrão de qualidade audiovisual.',
-    diretor: 'João Silva',
-    dop: 'Maria Costa',
-    whatsapp_projeto: '11999999999',
-    estoque: '2024',
-  },
-  '2': {
-    id: '2',
-    nome: 'Motion Reel',
-    descricao: 'Brand Film · Rio de Janeiro',
-    resumo: 'Uma exploração visual do movimento e da forma, traduzindo a identidade de uma marca em linguagem cinematográfica de alta qualidade.',
-    categoria: { nome: 'Motion Design' },
-    link_projeto: null,
-    imagem: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=1920',
-    depoimento: 'Transformamos conceitos abstratos em imagens que comunicam sem palavras.',
-    ficha_tecnica: 'Pós-produção completa com colorização avançada e composição de VFX.',
-    diretor: 'Ana Lima',
-    dop: null,
-    whatsapp_projeto: '11999999999',
-    estoque: '2023',
-  },
-};
-
-const PROXIMOS = {
-  '1': { id: '2', nome: 'Motion Reel', descricao: 'Brand Film', estoque: '2023', imagem: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=1920' },
-  '2': { id: '1', nome: 'Showreel 2024', descricao: 'Motion Design', estoque: '2024', imagem: 'https://images.unsplash.com/photo-1536240478700-b869ad10e128?w=1920' },
-};
+// ── Converte nome do case em slug para a URL ──────────────────────────────────
+function toSlug(nome) {
+  return nome
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
 
 const NOME_PRODUTORA = 'Creapes';
+const LOGO_FALLBACK  = 'https://res.cloudinary.com/dhu1cqvrb/image/upload/v1781788827/creapeslogo_jajjgt.png';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function buildVimeoEmbedUrl(url) {
@@ -64,14 +36,36 @@ function buildVimeoPlayerUrl(url) {
   return final;
 }
 
+function buildVimeoEmbedUrl(url) {
+  if (!url) return null;
+  if (url.includes('player.vimeo.com')) return url;
+  const clean = url.split('?')[0].replace(/\/$/, '');
+  const parts = clean.split('/');
+  if (parts.length >= 5) return `https://player.vimeo.com/video/${parts[3]}?h=${parts[4]}`;
+  if (parts.length === 4) return `https://player.vimeo.com/video/${parts[3]}`;
+  return null;
+}
+
+function buildVimeoPlayerUrl(url) {
+  if (!url) return null;
+  let final = buildVimeoEmbedUrl(url) || url;
+  if (!final.includes('autoplay')) final += (final.includes('?') ? '&' : '?') + 'autoplay=1';
+  return final;
+}
+
+
 export default function Case() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
-  const prod = MOCK_CASES[id] || MOCK_CASES['1'];
-  const proximo = PROXIMOS[id];
+
+  const [prod, setProd]           = useState(null);
+  const [proximo, setProximo]     = useState(null);
+  const [siteLogo, setSiteLogo]   = useState(LOGO_FALLBACK);
+  const [siteWpp, setSiteWpp]     = useState('');
+  const [loading, setLoading]     = useState(true);
 
   const [videoModal, setVideoModal] = useState(false);
-  const [videoUrl, setVideoUrl] = useState('');
+  const [videoUrl, setVideoUrl]     = useState('');
   const [nextBgVisible, setNextBgVisible] = useState(false);
 
   // Cursor personalizado
@@ -92,7 +86,56 @@ export default function Case() {
   const heroMediaRef = useRef(null);
   const heroContentRef = useRef(null);
 
-  const embedUrl = buildVimeoEmbedUrl(prod.link_projeto);
+  // ── Fetch do case pelo slug ───────────────────────────────────────────────
+  useEffect(() => {
+    setLoading(true);
+    getCases()
+      .then((cases) => {
+        // Encontra o case cujo slug bate
+        const found = cases.find((c) => toSlug(c.nome) === slug);
+        if (!found) { setLoading(false); return; }
+
+        // Monta o objeto normalizado igual ao Home usa
+        const normalizado = {
+          ...found,
+          descricao:  found.descricao || '',
+          resumo:     found.resumo    || found.descricao || '',
+          depoimento: found.depoimento || '',
+          ficha_tecnica: found.ficha_tecnica || '',
+          diretor:    found.diretor   || null,
+          dop:        found.dop       || null,
+          estoque:    found.estoque   || found.ano || '',
+          categoria:  found.categoria_nome
+                        ? { nome: found.categoria_nome }
+                        : found.categoria || null,
+          whatsapp_projeto: found.whatsapp_projeto || '',
+        };
+        setProd(normalizado);
+
+        // Próximo case (excluindo o atual)
+        const outros = cases.filter((c) => c.id !== found.id);
+        if (outros.length > 0) {
+          const prox = outros[0];
+          setProximo({
+            slug:     toSlug(prox.nome),
+            nome:     prox.nome,
+            descricao: prox.descricao || '',
+            estoque:  prox.estoque || prox.ano || '',
+            imagem:   prox.imagem || null,
+          });
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+
+    getConfig()
+      .then((config) => {
+        if (!config) return;
+        setSiteLogo(config.logo_url || config.logo || LOGO_FALLBACK);
+        setSiteWpp(config.whatsapp_comercial || '');
+      })
+      .catch(() => {});
+  }, [slug]);
 
   function openVideo(url) {
     const final = buildVimeoPlayerUrl(url);
@@ -224,6 +267,26 @@ export default function Case() {
     };
   }, []);
 
+
+  if (loading) {
+    return (
+      <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'rgba(240,240,240,0.3)', fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '.2em', fontSize: '.8rem', textTransform: 'uppercase' }}>Carregando...</div>
+      </div>
+    );
+  }
+
+  if (!prod) {
+    return (
+      <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'rgba(240,240,240,0.3)', fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '.2em', fontSize: '.8rem', textTransform: 'uppercase' }}>Case não encontrado.</div>
+      </div>
+    );
+  }
+
+  const embedUrl = buildVimeoEmbedUrl(prod.link_projeto);
+  const whatsapp = prod.whatsapp_projeto || siteWpp;
+
   const marqueeItems = [
     prod.nome, NOME_PRODUTORA, prod.descricao || 'Audiovisual', prod.estoque || '2024',
     'Elite Audiovisual', 'Produção de Vídeo',
@@ -245,7 +308,6 @@ export default function Case() {
       link: prod.link_projeto,
     },
   ].filter(Boolean);
-
   return (
     <>
       {/* ── Custom cursor ── */}
@@ -260,10 +322,12 @@ export default function Case() {
           <svg viewBox="0 0 24 24"><polyline points="19 12 5 12"/><polyline points="12 5 5 12 12 19"/></svg>
           Voltar
         </a>
-        <div className="nav-brand" id="navBrand">{NOME_PRODUTORA}</div>
-        {prod.whatsapp_projeto && (
+        <div className="nav-brand" id="navBrand">
+          <img src={siteLogo} alt={NOME_PRODUTORA} style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }} />
+        </div>
+        {whatsapp && (
           <a
-            href={`https://wa.me/55${prod.whatsapp_projeto.replace(/\D/g, '')}`}
+            href={`https://wa.me/55${whatsapp.replace(/\D/g, '')}`}
             target="_blank" rel="noreferrer"
             className="nav-cta" id="navCta"
           >Fale Conosco</a>
@@ -427,8 +491,8 @@ export default function Case() {
         <p className="cta-eyebrow case-fade-in">Vamos criar juntos</p>
         <h2 className="cta-headline case-fade-in">Seu próximo<br />projeto aqui.</h2>
         <div className="cta-btns case-fade-in">
-          {prod.whatsapp_projeto && (
-            <a href={`https://wa.me/55${prod.whatsapp_projeto.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="btn-primary">
+          {whatsapp && (
+            <a href={`https://wa.me/55${whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="btn-primary">
               <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
               Falar no WhatsApp
             </a>
@@ -444,7 +508,7 @@ export default function Case() {
       {proximo && (
         <div className="next-section">
           <Link
-            to={`/case/${proximo.id}`}
+            to={`/case/${proximo.slug}`}
             className="next-inner"
             onMouseEnter={() => setNextBgVisible(true)}
             onMouseLeave={() => setNextBgVisible(false)}
