@@ -88,6 +88,7 @@ class CaseOut(BaseModel):
     descricao: Optional[str]
     resumo: Optional[str]
     categoria_id: Optional[int]
+    categoria_nome: Optional[str] = None
     link_projeto: Optional[str]
     imagem: Optional[str]
     depoimento: Optional[str]
