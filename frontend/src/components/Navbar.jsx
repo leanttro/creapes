@@ -68,7 +68,7 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null }) {
       <style>{`
         .nav-overlay {
           position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
-          background: rgba(0,0,0,0.98); z-index: 99999;
+          background: rgba(0,0,0,0.98); z-index: 100001;
           display: flex; justify-content: center; align-items: center;
           opacity: 0; pointer-events: none; transition: opacity 0.5s var(--ease);
         }
@@ -98,7 +98,13 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null }) {
           padding: 0.8rem 4rem;
           display: flex; justify-content: space-between; align-items: center;
           background: #000000;
-          z-index: 100;
+          /* Precisa ficar ACIMA dos overlays cinematográficos do Home.jsx
+             (.cinematic-overlay z-index 9990, .cinematic-grade 9991,
+             .cinematic-vignette 9992), senão o mix-blend-mode deles
+             "lava" as cores sólidas do nav (fica parecendo transparente/cinza). */
+          z-index: 100000;
+          isolation: isolate; /* cria stacking context próprio: garante que o nav
+                                  não herde/receba blend mode de elementos acima dele */
         }
 
         .nav-left, .nav-right { display: flex; align-items: center; flex: 1; }
