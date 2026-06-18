@@ -337,7 +337,7 @@ export default function Evolve({
           text-shadow: 0 4px 30px rgba(0,0,0,1);
           margin: 0; pointer-events: none;
         }
-        .evolve-phrase.active { pointer-events: all !important; cursor: default; }
+        .evolve-phrase.active { pointer-events: all !important; cursor: default; opacity: 1; }
         .hover-move { display: inline-block; will-change: transform; }
         .hover-move .char { display: inline-block; will-change: transform, opacity; }
 
