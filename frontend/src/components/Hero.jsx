@@ -20,7 +20,14 @@ export default function Hero({ slides = [] }) {
     window.location.href = `/case/${caseId}`;
   };
 
-  if (slides.length === 0) return null;
+  if (slides.length === 0) {
+    // Antes: return null — isso deixava a seção sem nenhum background,
+    // só aparecia o fundo da página por trás (e os overlays cinematográficos
+    // por cima), dando a impressão de "transparência" sob o navbar.
+    // Enquanto não há case categorizado como "hero" no banco, mostra
+    // pelo menos um header preto sólido do tamanho da viewport.
+    return <header className="hero" id="hero" style={{ background: '#000' }} />;
+  }
 
   return (
     <header className="hero" id="hero">
