@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models.orm import Case as CaseORM
+from app.models.orm import Case as CaseORM, Categoria as CategoriaORM
 from app.models.schemas import CaseInput, CaseOut, MensagemOut
 from app.services.cache import cache_get, cache_invalidate, cache_set
 
@@ -17,6 +17,13 @@ router = APIRouter(prefix="/cases", tags=["Cases"])
 NS = "cases"
 
 
+def _montar_case_out(case_row: CaseORM, nome_categoria: str | None) -> CaseOut:
+    """Monta o CaseOut a partir da linha do Case + nome da categoria (já buscado via join)."""
+    data = CaseOut.model_validate(case_row)
+    data.categoria_nome = nome_categoria
+    return data
+
+
 # ── GET /cases ────────────────────────────────────────────────────────────────
 
 @router.get("", response_model=List[CaseOut])
@@ -25,9 +32,15 @@ async def listar_cases(db: AsyncSession = Depends(get_db)) -> List[CaseOut]:
     if cached is not None:
         return cached
 
-    result = await db.execute(select(CaseORM).order_by(CaseORM.sort, CaseORM.id))
-    rows = result.scalars().all()
-    data = [CaseOut.model_validate(r) for r in rows]
+    # LEFT JOIN com categorias para trazer o nome junto
+    result = await db.execute(
+        select(CaseORM, CategoriaORM.nome)
+        .outerjoin(CategoriaORM, CaseORM.categoria_id == CategoriaORM.id)
+        .order_by(CaseORM.sort, CaseORM.id)
+    )
+    rows = result.all()  # lista de tuplas (CaseORM, nome_categoria)
+
+    data = [_montar_case_out(case, nome_cat) for case, nome_cat in rows]
     cache_set(NS, "all", data)
     return data
 
@@ -41,12 +54,17 @@ async def detalhe_case(case_id: int, db: AsyncSession = Depends(get_db)) -> Case
     if cached is not None:
         return cached
 
-    result = await db.execute(select(CaseORM).where(CaseORM.id == case_id))
-    row = result.scalar_one_or_none()
+    result = await db.execute(
+        select(CaseORM, CategoriaORM.nome)
+        .outerjoin(CategoriaORM, CaseORM.categoria_id == CategoriaORM.id)
+        .where(CaseORM.id == case_id)
+    )
+    row = result.first()
     if not row:
         raise HTTPException(status_code=404, detail="Case não encontrado.")
 
-    data = CaseOut.model_validate(row)
+    case, nome_cat = row
+    data = _montar_case_out(case, nome_cat)
     cache_set(NS, chave, data)
     return data
 
@@ -61,7 +79,15 @@ async def criar_case(dados: CaseInput, db: AsyncSession = Depends(get_db)) -> Ca
     await db.refresh(novo)
     cache_invalidate(NS)
     logger.info("Case criado: id=%s nome=%s", novo.id, novo.nome)
-    return CaseOut.model_validate(novo)
+
+    nome_cat = None
+    if novo.categoria_id:
+        cat_result = await db.execute(
+            select(CategoriaORM.nome).where(CategoriaORM.id == novo.categoria_id)
+        )
+        nome_cat = cat_result.scalar_one_or_none()
+
+    return _montar_case_out(novo, nome_cat)
 
 
 # ── PUT /cases/{id} ───────────────────────────────────────────────────────────
@@ -82,7 +108,15 @@ async def atualizar_case(
     await db.refresh(row)
     cache_invalidate(NS)
     logger.info("Case atualizado: id=%s", case_id)
-    return CaseOut.model_validate(row)
+
+    nome_cat = None
+    if row.categoria_id:
+        cat_result = await db.execute(
+            select(CategoriaORM.nome).where(CategoriaORM.id == row.categoria_id)
+        )
+        nome_cat = cat_result.scalar_one_or_none()
+
+    return _montar_case_out(row, nome_cat)
 
 
 # ── DELETE /cases/{id} ────────────────────────────────────────────────────────
