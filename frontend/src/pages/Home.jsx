@@ -16,7 +16,6 @@ const InstagramFeed = lazy(() => import('../components/InstagramFeed'));
 
 gsap.registerPlugin(ScrollTrigger);
 
-// ── Fallbacks caso o backend falhe ──────────────────────────────────────────
 const SITE_FALLBACK = {
   nome: 'Creapes',
   logo: null,
@@ -35,6 +34,29 @@ const CLIENT_LOGOS = [
   'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg',
 ];
 
+// ── Converte URL do Vimeo normal para player embed ────────────────────────────
+function buildVimeoEmbedUrl(url) {
+  if (!url) return null;
+  if (url.includes('player.vimeo.com')) return url;
+  const clean = url.split('?')[0].replace(/\/$/, '');
+  const parts = clean.split('/');
+  // vimeo.com/VIDEO_ID/HASH
+  if (parts.length >= 5) return `https://player.vimeo.com/video/${parts[3]}?h=${parts[4]}`;
+  // vimeo.com/VIDEO_ID
+  if (parts.length === 4) return `https://player.vimeo.com/video/${parts[3]}`;
+  return null;
+}
+
+// ── Verifica se case pertence à categoria "hero" ──────────────────────────────
+// Igual ao original Jinja: 'hero' in c.slug|lower or 'hero' in c.nome|lower
+function isHeroCase(c) {
+  const catNome = (c.categoria_nome || c.categoria?.nome || '').toLowerCase();
+  const catSlug = (c.categoria_slug || c.categoria?.slug || '').toLowerCase();
+  // também aceita quando o campo categoria já vem como string direto
+  const catStr  = (typeof c.categoria === 'string' ? c.categoria : '').toLowerCase();
+  return catNome.includes('hero') || catSlug.includes('hero') || catStr.includes('hero');
+}
+
 export default function Home() {
   const [loaderDone, setLoaderDone] = useState(false);
   const [site, setSite] = useState(SITE_FALLBACK);
@@ -43,48 +65,52 @@ export default function Home() {
 
   // ── Fetch dados do backend ─────────────────────────────────────────────────
   useEffect(() => {
-    // Cases: separa hero (categoria "hero") de portfolio (resto)
     getCases()
       .then((cases) => {
-        const hero = cases
-          .filter((c) => c.categoria?.toLowerCase() === 'hero')
-          .map((c) => ({
-            id: c.id,
-            nome: c.nome,
-            ano: c.ano || '',
-            bgVideo: c.link_projeto || null,
-            isVimeo: c.link_projeto?.includes('vimeo') || false,
-            caseId: c.id,
-          }));
+        // Ordena pelo campo "preco" (igual ao original: produtos|sort(attribute='preco'))
+        const sorted = [...cases].sort((a, b) => (a.preco ?? 0) - (b.preco ?? 0));
 
-        const portfolio = cases
-          .filter((c) => c.categoria?.toLowerCase() !== 'hero')
+        const hero = sorted
+          .filter(isHeroCase)
+          .map((c) => {
+            const bgVideo = buildVimeoEmbedUrl(c.link_projeto) || c.link_projeto || null;
+            return {
+              id:      c.id,
+              nome:    c.nome,
+              ano:     c.estoque || c.ano || '',   // original usa p.estoque para o ano
+              bgVideo,
+              isVimeo: bgVideo?.includes('vimeo.com') || false,
+              caseId:  c.id,
+            };
+          });
+
+        const portfolio = sorted
+          .filter((c) => !isHeroCase(c))
           .map((c) => ({
-            id: c.id,
-            nome: c.nome,
+            id:        c.id,
+            nome:      c.nome,
             descricao: c.descricao || '',
-            ano: c.ano || '',
-            bgLink: c.link_projeto || null,
-            isVimeo: c.link_projeto?.includes('vimeo') || false,
+            ano:       c.estoque || c.ano || '',
+            bgLink:    c.link_projeto || null,
+            isVimeo:   c.link_projeto?.includes('vimeo') || false,
           }));
 
-        if (hero.length > 0) setHeroSlides(hero);
+        if (hero.length > 0)     setHeroSlides(hero);
         if (portfolio.length > 0) setPortfolioItems(portfolio);
       })
       .catch(() => {
-        // Mantém arrays vazios — componentes mostram fallback visual
+        // Arrays vazios — componentes mostram fallback visual
       });
 
-    // Config: nome, logo, whatsapp, redes sociais
     getConfig()
       .then((config) => {
         if (!config) return;
         setSite({
-          nome: config.sobre_titulo || SITE_FALLBACK.nome,
-          logo: null,
-          whatsapp: config.whatsapp_comercial || SITE_FALLBACK.whatsapp,
-          instagramUrl: config.instagram_url || SITE_FALLBACK.instagramUrl,
-          vimeoUrl: SITE_FALLBACK.vimeoUrl,
+          nome:        config.sobre_titulo      || SITE_FALLBACK.nome,
+          logo:        null,
+          whatsapp:    config.whatsapp_comercial || SITE_FALLBACK.whatsapp,
+          instagramUrl: config.instagram_url    || SITE_FALLBACK.instagramUrl,
+          vimeoUrl:    SITE_FALLBACK.vimeoUrl,
           linkedinUrl: SITE_FALLBACK.linkedinUrl,
         });
       })
@@ -121,7 +147,7 @@ export default function Home() {
   return (
     <>
       <div className="cinematic-overlay" aria-hidden="true" />
-      <div className="cinematic-grade" aria-hidden="true" />
+      <div className="cinematic-grade"   aria-hidden="true" />
       <div className="cinematic-vignette" aria-hidden="true" />
 
       <div
@@ -211,19 +237,19 @@ export default function Home() {
         }
         @keyframes flicker {
           0%, 100% { opacity: 0.4; }
-          50% { opacity: 0.35; }
+          50%       { opacity: 0.35; }
         }
         @keyframes grain {
-          0%, 100% { transform: translate(0, 0); }
-          10% { transform: translate(-5%, -10%); }
-          20% { transform: translate(-15%, 5%); }
-          30% { transform: translate(7%, -25%); }
-          40% { transform: translate(-5%, 25%); }
-          50% { transform: translate(-15%, 10%); }
-          60% { transform: translate(15%, 0%); }
-          70% { transform: translate(0%, 15%); }
-          80% { transform: translate(3%, 35%); }
-          90% { transform: translate(-10%, 10%); }
+          0%,100% { transform: translate(0,0); }
+          10%  { transform: translate(-5%,-10%); }
+          20%  { transform: translate(-15%,5%); }
+          30%  { transform: translate(7%,-25%); }
+          40%  { transform: translate(-5%,25%); }
+          50%  { transform: translate(-15%,10%); }
+          60%  { transform: translate(15%,0%); }
+          70%  { transform: translate(0%,15%); }
+          80%  { transform: translate(3%,35%); }
+          90%  { transform: translate(-10%,10%); }
         }
       `}</style>
     </>
