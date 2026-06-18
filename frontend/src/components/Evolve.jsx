@@ -285,7 +285,7 @@ export default function Evolve({
               <h2
                 key={phrase.id}
                 ref={(el) => (phraseRefs.current[index] = el)}
-                className={`evolve-phrase ${phrase.className}`}
+                className={`evolve-phrase ${phrase.className}${index === 0 ? ' active' : ''}`}
               >
                 <span className="hover-move">{phrase.text}</span>
               </h2>
