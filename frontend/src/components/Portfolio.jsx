@@ -139,7 +139,7 @@ export default function Portfolio({ items = [] }) {
                     window.location.href = `/case/${item.id}`;
                   }}
                 >
-                  {item.isVimeo ? (
+                  {item.isVimeo && item.bgLink ? (
                     <div
                       className="vimeo-port-bg"
                       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none' }}
@@ -152,7 +152,7 @@ export default function Portfolio({ items = [] }) {
                       />
                     </div>
                   ) : (
-                    item.bgLink && (
+                    !item.isVimeo && item.bgLink && (
                       <video src={item.bgLink} autoPlay loop muted playsInline style={{ pointerEvents: 'none' }} />
                     )
                   )}
