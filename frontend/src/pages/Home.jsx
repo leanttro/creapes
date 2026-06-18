@@ -56,7 +56,7 @@ export default function Home() {
   useEffect(() => {
     getCases()
       .then((cases) => {
-        const sorted = [...cases].sort((a, b) => (a.preco ?? 0) - (b.preco ?? 0));
+        const sorted = [...cases].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
 
         const hero = sorted
           .filter(isHeroCase)
@@ -245,6 +245,12 @@ export default function Home() {
           position: fixed; top: 0; left: 0; width: 100%; height: 100%;
           pointer-events: none; z-index: 9992;
           background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.95) 100%);
+        }
+        @media (max-width: 768px) {
+          html, body {
+            overflow-x: hidden;
+            max-width: 100vw;
+          }
         }
         @keyframes flicker {
           0%, 100% { opacity: 0.4; }
