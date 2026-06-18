@@ -59,16 +59,6 @@ export default function Portfolio({ items = [] }) {
     return 'align-center';
   }
 
-  function getQuoteSide(loopIndex) {
-    // even -> quote à esquerda do item (right: 100%); odd -> à direita (left: 100%)
-    return loopIndex % 2 === 0 ? 'left' : 'right';
-  }
-
-  function getQuoteVerticalStyle(loopIndex) {
-    if (loopIndex % 3 === 0) return { top: '10vh' };
-    if (loopIndex % 2 === 0) return { bottom: '10vh' };
-    return { top: '50%', transform: 'translateY(-50%)' };
-  }
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -121,8 +111,6 @@ export default function Portfolio({ items = [] }) {
             const loopIndex = idx + 1; // equivalente a loop.index (1-based) do Jinja
             const sizeClass = getSizeClass(loopIndex);
             const wrapperAlignClass = getWrapperAlignClass(loopIndex);
-            const quoteSide = getQuoteSide(loopIndex);
-            const quoteVerticalStyle = getQuoteVerticalStyle(loopIndex);
 
             const captionParts = [item.descricao, item.ano].filter(Boolean);
 
@@ -132,8 +120,6 @@ export default function Portfolio({ items = [] }) {
                 item={item}
                 wrapperAlignClass={wrapperAlignClass}
                 sizeClass={sizeClass}
-                quoteSide={quoteSide}
-                quoteVerticalStyle={quoteVerticalStyle}
                 captionParts={captionParts}
               />
             );
@@ -321,7 +307,7 @@ export default function Portfolio({ items = [] }) {
  * de comportamento é o gate "isVisible" controlando se o iframe/video
  * é montado ou não.
  */
-function PortfolioItem({ item, wrapperAlignClass, sizeClass, quoteSide, quoteVerticalStyle, captionParts }) {
+function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts }) {
   const itemRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -358,9 +344,10 @@ function PortfolioItem({ item, wrapperAlignClass, sizeClass, quoteSide, quoteVer
         <div
           className="phrase-quote-block"
           style={{
-            [quoteSide === 'left' ? 'right' : 'left']: 'calc(100% + 3vw)',
+            left: 'calc(100% + 2.5vw)',
+            top: '50%',
+            transform: 'translateY(-50%)',
             textAlign: 'left',
-            ...quoteVerticalStyle,
           }}
         >
           {item.descricao}
