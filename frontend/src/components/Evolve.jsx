@@ -70,7 +70,9 @@ export default function Evolve({
       } else if (rect.top > 0) {
         evolveLastIndexRef.current = -1;
         evolvePhrases.forEach((phrase, i) => {
-          phrase.className = `evolve-phrase phrase-${i + 1}`;
+          phrase.className = i === 0
+            ? `evolve-phrase phrase-${i + 1} active`
+            : `evolve-phrase phrase-${i + 1}`;
         });
       } else if (rect.bottom < windowHeight) {
         evolveLastIndexRef.current = 3;
