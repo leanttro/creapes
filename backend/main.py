@@ -20,7 +20,7 @@ from slowapi.util import get_remote_address
 
 load_dotenv()
 
-from app.routers import blog, cases, contato, leads, servicos, upload, agenda, config
+from app.routers import blog, cases, categorias, contato, leads, servicos, upload, agenda, config
 
 logging.basicConfig(
     level=logging.INFO,
@@ -70,14 +70,15 @@ logger.info("CORS permitido para: %s", allowed_origins)
 
 API_PREFIX = "/api"
 
-app.include_router(cases.router,    prefix=API_PREFIX)
-app.include_router(servicos.router, prefix=API_PREFIX)
-app.include_router(blog.router,     prefix=API_PREFIX)
-app.include_router(leads.router,    prefix=API_PREFIX)
-app.include_router(contato.router,  prefix=API_PREFIX)
-app.include_router(upload.router,   prefix=API_PREFIX)
-app.include_router(agenda.router,   prefix=API_PREFIX)
-app.include_router(config.router,   prefix=API_PREFIX)
+app.include_router(cases.router,      prefix=API_PREFIX)
+app.include_router(categorias.router, prefix=API_PREFIX)
+app.include_router(servicos.router,   prefix=API_PREFIX)
+app.include_router(blog.router,       prefix=API_PREFIX)
+app.include_router(leads.router,      prefix=API_PREFIX)
+app.include_router(contato.router,    prefix=API_PREFIX)
+app.include_router(upload.router,     prefix=API_PREFIX)
+app.include_router(agenda.router,     prefix=API_PREFIX)
+app.include_router(config.router,     prefix=API_PREFIX)
 
 uploads_path = Path(__file__).parent / "uploads"
 uploads_path.mkdir(parents=True, exist_ok=True)
