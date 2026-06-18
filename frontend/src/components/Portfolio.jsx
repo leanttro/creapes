@@ -226,8 +226,8 @@ export default function Portfolio({ items = [] }) {
 
         .portfolio-track {
           display: flex;
-          align-items: flex-start;
-          gap: 18vw;
+          align-items: center;
+          gap: 10vw;
           padding: 0 50vw 0 10vw;
           width: max-content;
           height: 80vh;
@@ -236,8 +236,8 @@ export default function Portfolio({ items = [] }) {
           will-change: transform;
         }
 
-        .port-wrapper.align-bottom { transform: translateY(8vh); }
-        .port-wrapper.align-top { transform: translateY(-5vh); }
+        .port-wrapper.align-bottom { transform: translateY(18vh); }
+        .port-wrapper.align-top { transform: translateY(-18vh); }
         .port-wrapper.align-center { transform: translateY(0); }
 
         .port-item {
