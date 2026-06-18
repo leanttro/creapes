@@ -23,6 +23,7 @@ class Case(Base):
     estoque          = Column(Integer, default=1)
     resumo           = Column(Text)
     sort             = Column(Integer, default=0)
+    ano              = Column(String(10))
 
 class Servico(Base):
     __tablename__ = "servicos"
