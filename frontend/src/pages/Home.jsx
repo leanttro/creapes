@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState, lazy, Suspense, useCallback } from 'react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import gsap from 'gsap';
 
@@ -148,37 +148,16 @@ export default function Home() {
     return () => observer.disconnect();
   }, [loaderDone]);
 
-  function handleLoaderComplete() {
+  const handleLoaderComplete = useCallback(() => {
     document.body.classList.remove('loading');
     setLoaderDone(true);
-  }
+  }, []);
 
   return (
     <>
       <div className="cinematic-overlay" aria-hidden="true" />
       <div className="cinematic-grade"   aria-hidden="true" />
       <div className="cinematic-vignette" aria-hidden="true" />
-
-      <div
-        id="evolve-curtain-top"
-        style={{
-          position: 'fixed', top: '-50%', left: 0,
-          width: '100%', height: '50%',
-          background: '#000', zIndex: 9998,
-          pointerEvents: 'none',
-          transition: 'transform 0.6s cubic-bezier(0.16,1,0.3,1)',
-        }}
-      />
-      <div
-        id="evolve-curtain-bottom"
-        style={{
-          position: 'fixed', bottom: '-50%', left: 0,
-          width: '100%', height: '50%',
-          background: '#000', zIndex: 9998,
-          pointerEvents: 'none',
-          transition: 'transform 0.6s cubic-bezier(0.16,1,0.3,1)',
-        }}
-      />
 
       <Loader onComplete={handleLoaderComplete} />
 
