@@ -25,14 +25,7 @@ const SITE_FALLBACK = {
   linkedinUrl: 'https://linkedin.com/company/creapes',
 };
 
-const CLIENT_LOGOS = [
-  'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
-  'https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg',
-  'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',
-  'https://upload.wikimedia.org/wikipedia/commons/a/a0/Adidas_wordmark.svg',
-  'https://upload.wikimedia.org/wikipedia/commons/5/51/IBM_logo.svg',
-  'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg',
-];
+// CLIENT_LOGOS removido — logos agora vêm do painel via getConfig()
 
 // ── Converte URL do Vimeo normal para player embed ────────────────────────────
 function buildVimeoEmbedUrl(url) {
@@ -62,6 +55,7 @@ export default function Home() {
   const [site, setSite] = useState(SITE_FALLBACK);
   const [heroSlides, setHeroSlides] = useState([]);
   const [portfolioItems, setPortfolioItems] = useState([]);
+  const [clientLogos, setClientLogos] = useState([]);
 
   // ── Fetch dados do backend ─────────────────────────────────────────────────
   useEffect(() => {
@@ -122,6 +116,14 @@ export default function Home() {
           vimeoUrl:    SITE_FALLBACK.vimeoUrl,
           linkedinUrl: SITE_FALLBACK.linkedinUrl,
         });
+        // Lê os logos dos clientes cadastrados no painel (campo clientes_logos)
+        if (config.clientes_logos) {
+          const urls = config.clientes_logos
+            .split('\n')
+            .map((u) => u.trim())
+            .filter(Boolean);
+          if (urls.length > 0) setClientLogos(urls);
+        }
       })
       .catch(() => {});
   }, []);
@@ -166,7 +168,7 @@ export default function Home() {
 
         <Hero slides={heroSlides} />
 
-        <Clientes logos={CLIENT_LOGOS} />
+        <Clientes logos={clientLogos} />
 
         <Evolve ready={loaderDone} />
 
