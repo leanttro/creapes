@@ -60,12 +60,13 @@ export default function Case() {
     getCases()
       .then((cases) => {
         const matches = cases.filter((c) => toSlug(c.nome) === slug);
-        const score = (c) => (c.descricao ? 2 : 0) + (c.link_projeto ? 2 : 0) + (c.resumo ? 1 : 0) + (c.imagem ? 1 : 0);
+        const score = (c) => (c.descricao ? 2 : 0) + (c.link_projeto || c.link ? 2 : 0) + (c.resumo ? 1 : 0) + (c.imagem ? 1 : 0);
         const found = matches.sort((a, b) => score(b) - score(a))[0] || null;
         if (!found) { setLoading(false); return; }
 
         setProd({
           ...found,
+          link_projeto: found.link_projeto || found.link || null,
           descricao:     found.descricao     || '',
           resumo:        found.resumo        || found.descricao || '',
           depoimento:    found.depoimento    || '',
