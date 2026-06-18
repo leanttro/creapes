@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -28,6 +28,18 @@ gsap.registerPlugin(ScrollTrigger);
  *
  * Cleanup: o ScrollTrigger criado é killado no unmount para não duplicar
  * pins ao desmontar/remontar o componente (ex: hot reload, navegação).
+ *
+ * FIX DE PERFORMANCE (corrigido agora):
+ * - Antes: TODOS os itens do portfólio montavam seu iframe do Vimeo com
+ *   autoplay=1 de uma vez só, mesmo os que estavam fora da área visível
+ *   (o scroll horizontal pinado só move a track via transform, então
+ *   "fora da tela" não significa "fora do DOM"). Isso somava aos players
+ *   já tocando no Hero, multiplicando requests/xhr e travando a navegação.
+ * - Agora: cada port-item usa IntersectionObserver pra só montar o
+ *   iframe/video quando o card entra (ou está próximo) da viewport, e
+ *   desmonta quando sai. Como o scroll é horizontal via transform, o
+ *   threshold/rootMargin do observer funciona normalmente (ele observa
+ *   a posição real do elemento na tela, não a posição no fluxo do DOM).
  */
 export default function Portfolio({ items = [] }) {
   const sectionRef = useRef(null);
@@ -115,54 +127,15 @@ export default function Portfolio({ items = [] }) {
             const captionParts = [item.descricao, item.ano].filter(Boolean);
 
             return (
-              <div
+              <PortfolioItem
                 key={item.id}
-                className={`port-wrapper ${wrapperAlignClass}`}
-                style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center' }}
-              >
-                {item.descricao && (
-                  <div
-                    className="phrase-quote-block"
-                    style={{
-                      [quoteSide === 'left' ? 'right' : 'left']: 'calc(100% + 3vw)',
-                      textAlign: 'left',
-                      ...quoteVerticalStyle,
-                    }}
-                  >
-                    {item.descricao}
-                  </div>
-                )}
-
-                <div
-                  className={`port-item ${sizeClass}`}
-                  onClick={() => {
-                    window.location.href = `/case/${item.id}`;
-                  }}
-                >
-                  {item.isVimeo && item.bgLink ? (
-                    <div
-                      className="vimeo-port-bg"
-                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none' }}
-                    >
-                      <iframe
-                        title={`port-vimeo-${item.id}`}
-                        src={`${item.bgLink}${item.bgLink.includes('?') ? '&' : '?'}background=1&autoplay=1&loop=1&muted=1&autopause=0`}
-                        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, border: 'none', pointerEvents: 'none' }}
-                        allow="autoplay; fullscreen; picture-in-picture"
-                      />
-                    </div>
-                  ) : (
-                    !item.isVimeo && item.bgLink && (
-                      <video src={item.bgLink} autoPlay loop muted playsInline style={{ pointerEvents: 'none' }} />
-                    )
-                  )}
-
-                  <div className="port-info">
-                    <h3>{item.nome}</h3>
-                  </div>
-                  <div className="port-item-caption">{captionParts.join(' | ')}</div>
-                </div>
-              </div>
+                item={item}
+                wrapperAlignClass={wrapperAlignClass}
+                sizeClass={sizeClass}
+                quoteSide={quoteSide}
+                quoteVerticalStyle={quoteVerticalStyle}
+                captionParts={captionParts}
+              />
             );
           })}
         </div>
@@ -338,5 +311,92 @@ export default function Portfolio({ items = [] }) {
         }
       `}</style>
     </section>
+  );
+}
+
+/**
+ * PortfolioItem — extraído em componente próprio só para poder usar
+ * IntersectionObserver individual por card (precisa de uma ref por item).
+ * Estrutura visual/classes idênticas à versão anterior; a única mudança
+ * de comportamento é o gate "isVisible" controlando se o iframe/video
+ * é montado ou não.
+ */
+function PortfolioItem({ item, wrapperAlignClass, sizeClass, quoteSide, quoteVerticalStyle, captionParts }) {
+  const itemRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = itemRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsVisible(entry.isIntersecting);
+        });
+      },
+      {
+        root: null,
+        // rootMargin generoso na horizontal: como o scroll é via transform,
+        // isso garante que o vídeo já comece a carregar um pouco antes de
+        // entrar 100% na tela (evita "pop-in" do vídeo).
+        rootMargin: '0px 50% 0px 50%',
+        threshold: 0.01,
+      }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      className={`port-wrapper ${wrapperAlignClass}`}
+      style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+    >
+      {item.descricao && (
+        <div
+          className="phrase-quote-block"
+          style={{
+            [quoteSide === 'left' ? 'right' : 'left']: 'calc(100% + 3vw)',
+            textAlign: 'left',
+            ...quoteVerticalStyle,
+          }}
+        >
+          {item.descricao}
+        </div>
+      )}
+
+      <div
+        ref={itemRef}
+        className={`port-item ${sizeClass}`}
+        onClick={() => {
+          window.location.href = `/case/${item.id}`;
+        }}
+      >
+        {isVisible && item.isVimeo && item.bgLink ? (
+          <div
+            className="vimeo-port-bg"
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none' }}
+          >
+            <iframe
+              title={`port-vimeo-${item.id}`}
+              src={`${item.bgLink}${item.bgLink.includes('?') ? '&' : '?'}background=1&autoplay=1&loop=1&muted=1&autopause=0`}
+              style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, border: 'none', pointerEvents: 'none' }}
+              allow="autoplay; fullscreen; picture-in-picture"
+            />
+          </div>
+        ) : (
+          isVisible && !item.isVimeo && item.bgLink && (
+            <video src={item.bgLink} autoPlay loop muted playsInline style={{ pointerEvents: 'none' }} />
+          )
+        )}
+
+        <div className="port-info">
+          <h3>{item.nome}</h3>
+        </div>
+        <div className="port-item-caption">{captionParts.join(' | ')}</div>
+      </div>
+    </div>
   );
 }
