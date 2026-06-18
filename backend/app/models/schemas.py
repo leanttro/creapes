@@ -37,13 +37,33 @@ class ContatoInput(BaseModel):
         return v.strip()
 
 
+# ── Categorias ────────────────────────────────────────────────────────────────
+
+class CategoriaInput(BaseModel):
+    nome: str
+
+    @field_validator("nome")
+    @classmethod
+    def nome_nao_vazio(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Nome não pode ser vazio")
+        return v.strip()
+
+
+class CategoriaOut(BaseModel):
+    id: int
+    nome: str
+
+    model_config = {"from_attributes": True}
+
+
 # ── Cases ─────────────────────────────────────────────────────────────────────
 
 class CaseInput(BaseModel):
     nome: str
     descricao: Optional[str] = None
     resumo: Optional[str] = None
-    categoria: Optional[str] = None
+    categoria_id: Optional[int] = None
     link_projeto: Optional[str] = None
     imagem: Optional[str] = None
     depoimento: Optional[str] = None
@@ -53,13 +73,21 @@ class CaseInput(BaseModel):
     ano: Optional[str] = None
     sort: int = 0
 
+    @field_validator("categoria_id", mode="before")
+    @classmethod
+    def categoria_id_vazio_para_none(cls, v):
+        # O <select> do painel envia "" quando "Sem Seção" está marcado
+        if v == "" or v is None:
+            return None
+        return v
+
 
 class CaseOut(BaseModel):
     id: int
     nome: str
     descricao: Optional[str]
     resumo: Optional[str]
-    categoria: Optional[str]
+    categoria_id: Optional[int]
     link_projeto: Optional[str]
     imagem: Optional[str]
     depoimento: Optional[str]
