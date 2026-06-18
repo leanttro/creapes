@@ -110,15 +110,15 @@ export default function Home() {
         if (!config) return;
         setSite({
           nome:        config.sobre_titulo      || SITE_FALLBACK.nome,
-          logo:        config.logo || SITE_FALLBACK.logo,
+          logo:        config.logo_url || config.logo || SITE_FALLBACK.logo,
           whatsapp:    config.whatsapp_comercial || SITE_FALLBACK.whatsapp,
           instagramUrl: config.instagram_url    || SITE_FALLBACK.instagramUrl,
           vimeoUrl:    SITE_FALLBACK.vimeoUrl,
           linkedinUrl: SITE_FALLBACK.linkedinUrl,
         });
         // Lê os logos dos clientes cadastrados no painel (campo clientes_logos)
-        if (config.clientes_logos) {
-          const urls = config.clientes_logos
+        if (config.logos_clientes || config.clientes_logos) {
+          const urls = (config.logos_clientes || config.clientes_logos)
             .split('\n')
             .map((u) => u.trim())
             .filter(Boolean);
