@@ -28,6 +28,16 @@ export default function Hero({ slides = [] }) {
     window.location.href = `/case/${caseId}`;
   };
 
+  // Mobile: tap no título ativo vai pro case; tap em título inativo troca o slide
+  const handleTitleTouch = (e, index, caseId) => {
+    e.preventDefault();
+    if (index === currentSlide) {
+      goToCase(caseId);
+    } else {
+      goToSlide(index);
+    }
+  };
+
   if (slides.length === 0) {
     // Antes: return null — isso deixava a seção sem nenhum background,
     // só aparecia o fundo da página por trás (e os overlays cinematográficos
@@ -113,6 +123,7 @@ export default function Hero({ slides = [] }) {
             className={`hero-title-item${index === currentSlide ? ' active' : ''}`}
             onMouseEnter={() => goToSlide(index)}
             onClick={() => goToCase(slide.caseId)}
+            onTouchStart={(e) => handleTitleTouch(e, index, slide.caseId)}
           >
             {slide.nome}{' '}
             {slide.ano && (
