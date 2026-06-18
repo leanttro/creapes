@@ -42,30 +42,30 @@ export default function Loader({ onComplete }) {
     tl.to(chars, {
       opacity: 1,
       y: 0,
-      duration: 0.5,
-      stagger: 0.12,
+      duration: 0.4,
+      stagger: 0.07,
       ease: 'back.out(1.7)',
-      delay: 0.3,
+      delay: 0.2,
     })
       .to(chars, {
         scale: 0,
         opacity: 0,
-        duration: 0.4,
-        stagger: 0.04,
+        duration: 0.3,
+        stagger: 0.03,
         ease: 'power4.in',
-        delay: 2.0,
+        delay: 0.6,
       })
       .to(topPanelRef.current, {
         yPercent: -100,
-        duration: 0.8,
+        duration: 0.7,
         ease: 'expo.inOut',
       })
       .to(
         botPanelRef.current,
-        { yPercent: 100, duration: 0.8, ease: 'expo.inOut' },
+        { yPercent: 100, duration: 0.7, ease: 'expo.inOut' },
         '<'
       )
-      .to(loaderRef.current, { opacity: 0, duration: 0.3 }, '-=0.3');
+      .to(loaderRef.current, { opacity: 0, duration: 0.2 }, '-=0.2');
 
     return () => {
       tl.kill();
