@@ -24,15 +24,24 @@ export default function Hero({ slides = [] }) {
     setCurrentSlide(index);
   };
 
-  const goToCase = (caseId) => {
-    window.location.href = `/case/${caseId}`;
+  function toSlug(nome) {
+    return (nome || '')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  const goToCase = (slide) => {
+    const slug = toSlug(slide.nome || '');
+    window.location.href = `/case/${slug}`;
   };
 
   // Mobile: tap no título ativo vai pro case; tap em título inativo troca o slide
-  const handleTitleTouch = (e, index, caseId) => {
+  const handleTitleTouch = (e, index, slide) => {
     e.preventDefault();
     if (index === currentSlide) {
-      goToCase(caseId);
+      goToCase(slide);
     } else {
       goToSlide(index);
     }
@@ -109,7 +118,7 @@ export default function Hero({ slides = [] }) {
             {/* Área clicável do slide */}
             <div
               className="play-link"
-              onClick={() => goToCase(slide.caseId)}
+              onClick={() => goToCase(slide)}
             />
           </div>
         );
@@ -122,8 +131,8 @@ export default function Hero({ slides = [] }) {
             key={slide.id}
             className={`hero-title-item${index === currentSlide ? ' active' : ''}`}
             onMouseEnter={() => goToSlide(index)}
-            onClick={() => goToCase(slide.caseId)}
-            onTouchStart={(e) => handleTitleTouch(e, index, slide.caseId)}
+            onClick={() => goToCase(slide)}
+            onTouchStart={(e) => handleTitleTouch(e, index, slide)}
           >
             {slide.nome}{' '}
             {slide.ano && (
