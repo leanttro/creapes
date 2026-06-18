@@ -4,6 +4,14 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
+function toSlug(nome) {
+  return (nome || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 export default function Portfolio({ items = [] }) {
   const sectionRef = useRef(null);
   const trackRef = useRef(null);
@@ -391,7 +399,7 @@ function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts, isMob
       <div
         ref={itemRef}
         className={`port-item ${sizeClass}`}
-        onClick={() => { window.location.href = `/case/${item.id}`; }}
+        onClick={() => { window.location.href = `/case/${toSlug(item.nome)}`; }}
       >
         {isVisible && item.isVimeo && item.bgLink ? (
           <div
