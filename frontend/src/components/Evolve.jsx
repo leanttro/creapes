@@ -141,20 +141,18 @@ export default function Evolve({
       updateEvolveCurtain();
     }
 
-    // Cálculo inicial (equivalente ao window.addEventListener('load', ...))
-    // Fix React: a frase 0 nasce com "active" no JSX (diferente do HTML puro
-    // onde a classe era adicionada dinamicamente). O browser não re-dispara
-    // a animação CSS se a classe já estava lá no mount. Força reflow para
-    // resetar a animação antes do primeiro calcScroll.
-    const firstPhrase = evolvePhrases[0];
-    if (firstPhrase) {
-      firstPhrase.classList.remove('active');
-      // eslint-disable-next-line no-unused-expressions
-      firstPhrase.offsetWidth; // reflow — reseta a animação
-      firstPhrase.classList.add('active');
-    }
+    // Cálculo inicial — frases nascem SEM active no JSX (igual ao HTML original).
+    // Usamos requestAnimationFrame para garantir que o browser já pintou o frame
+    // inicial (opacity:0 em todas) antes de adicionar "active" na frase 0,
+    // o que dispara a animação CSS flashStrikeIn corretamente.
     calcScroll();
     updateEvolveCurtain();
+    requestAnimationFrame(() => {
+      const firstPhrase = evolvePhrases[0];
+      if (firstPhrase && !firstPhrase.classList.contains('active')) {
+        firstPhrase.classList.add('active');
+      }
+    });
 
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onResize);
