@@ -3,6 +3,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
 COPY . .
+ARG CACHEBUST=1
 RUN npm run build
 
 FROM nginx:alpine
