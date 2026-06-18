@@ -263,7 +263,7 @@ export default function Home() {
           90%  { transform: translate(-10%,10%); }
         }
 
-        /* ── MOBILE: impede scroll horizontal em toda a página ── */
+        /* ── MOBILE: bloqueia scroll horizontal ── */
         @media (max-width: 1024px) {
           html, body {
             overflow-x: hidden !important;
