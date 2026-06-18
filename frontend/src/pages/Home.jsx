@@ -18,7 +18,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 const SITE_FALLBACK = {
   nome: 'Creapes',
-  logo: null,
+  logo: 'https://res.cloudinary.com/dhu1cqvrb/image/upload/v1781788827/creapeslogo_jajjgt.png',
   whatsapp: '5511999999999',
   instagramUrl: 'https://instagram.com/creapes',
   vimeoUrl: 'https://vimeo.com/creapes',
@@ -116,7 +116,7 @@ export default function Home() {
         if (!config) return;
         setSite({
           nome:        config.sobre_titulo      || SITE_FALLBACK.nome,
-          logo:        null,
+          logo:        config.logo || SITE_FALLBACK.logo,
           whatsapp:    config.whatsapp_comercial || SITE_FALLBACK.whatsapp,
           instagramUrl: config.instagram_url    || SITE_FALLBACK.instagramUrl,
           vimeoUrl:    SITE_FALLBACK.vimeoUrl,
