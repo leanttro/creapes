@@ -227,12 +227,15 @@ export default function Evolve({
     const firstPhrase = phraseRefs.current[0];
     if (!firstPhrase) return;
 
-    // Garante que nasce sem active, força reflow, depois adiciona — igual ao HTML puro
-    firstPhrase.classList.remove('active');
-    void firstPhrase.offsetWidth;
-    requestAnimationFrame(() => {
+    // setTimeout garante que o browser já aplicou visibility:visible no pai
+    // antes de adicionar a classe active (rAF sozinho pode rodar antes do paint)
+    const t = setTimeout(() => {
+      firstPhrase.classList.remove('active');
+      void firstPhrase.offsetWidth;
       firstPhrase.classList.add('active');
-    });
+    }, 50);
+
+    return () => clearTimeout(t);
   }, [ready]);
 
   return (
