@@ -1,6 +1,6 @@
-import './Evolve.css';
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
+import './Evolve.css';
 
 const PHRASES = [
   { id: 1, text: 'VAMOS EVOLUIR JUNTOS', className: 'phrase-1' },
@@ -23,7 +23,6 @@ export default function Evolve({
   const evolveLastIndexRef = useRef(-1);
   const rafScheduledRef = useRef(false);
 
-  // ── Efeito principal: scroll, curtinas, mouse ──────────────────────────────
   useEffect(() => {
     const evolveSection = wrapperRef.current;
     const evolveSticky = stickyRef.current;
@@ -138,9 +137,11 @@ export default function Evolve({
       evolveSpotlightEl.style.left = `${e.clientX - rect.left}px`;
       evolveSpotlightEl.style.top = `${e.clientY - rect.top}px`;
     }
+
     function onMouseEnterSpotlight() {
       if (evolveSpotlightEl) evolveSpotlightEl.style.opacity = '1';
     }
+
     function onMouseLeaveSpotlight() {
       if (evolveSpotlightEl) evolveSpotlightEl.style.opacity = '0';
     }
@@ -152,7 +153,6 @@ export default function Evolve({
       evolveSticky.addEventListener('mouseleave', onMouseLeaveSpotlight);
     }
 
-    // Scatter de caracteres no hover
     const cleanupScatter = [];
     evolvePhrases.forEach((phrase) => {
       const hoverText = phrase.querySelector('.hover-move');
@@ -209,7 +209,6 @@ export default function Evolve({
       });
     });
 
-    // CLEANUP — dentro do mesmo useEffect
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onResize);
@@ -226,13 +225,9 @@ export default function Evolve({
     };
   }, []);
 
-  // ── Dispara animação da frase 0 quando o Loader termina ───────────────────
   useEffect(() => {
     if (!ready) return;
 
-    // Dois rAFs encadeados: o primeiro espera o visibility:visible ser pintado,
-    // o segundo garante que o browser já calculou o layout com o elemento visível.
-    // Isso é mais confiável que setTimeout porque segue o ciclo real do browser.
     let id1, id2;
     id1 = requestAnimationFrame(() => {
       id2 = requestAnimationFrame(() => {
@@ -294,108 +289,6 @@ export default function Evolve({
           </div>
         </div>
       </div>
-
-      <style>{`
-        .evolve-wrapper { height: 320vh; position: relative; background: var(--bg); }
-        .evolve-sticky {
-          position: sticky; top: 0; height: 100vh; overflow: hidden;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .evolve-bg-video {
-          position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none;
-        }
-        .evolve-bg-video video { width: 100%; height: 100%; object-fit: cover; }
-        .evolve-overlay {
-          position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-          background: rgba(5,5,5,0.65); z-index: 2;
-        }
-        .flash-bang {
-          position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-          background: #fff; opacity: 0; z-index: 3; pointer-events: none; mix-blend-mode: overlay;
-        }
-        .flash-bang.fire { animation: bang 0.4s cubic-bezier(0.1, 1, 0.2, 1); }
-        @keyframes bang {
-          0% { opacity: 1; filter: brightness(3); }
-          100% { opacity: 0; filter: brightness(1); }
-        }
-        .evolve-spotlight {
-          position: absolute; width: 500px; height: 500px; border-radius: 50%;
-          pointer-events: none; z-index: 10;
-          background: radial-gradient(circle, rgba(208,255,0,0.25) 0%, transparent 60%);
-          mix-blend-mode: screen; transform: translate(-50%,-50%);
-          opacity: 0; transition: opacity 0.3s var(--ease); will-change: left, top;
-        }
-        .evolve-texts {
-          position: relative; z-index: 4; width: 100%;
-          height: clamp(4rem, 8vw, 8rem);
-          display: flex; justify-content: center; align-items: center; perspective: 1000px;
-        }
-        .evolve-phrase {
-          position: absolute; width: 100%; text-align: center;
-          font-size: clamp(2.5rem, 5vw, 6rem);
-          opacity: 0;
-          color: var(--text);
-          text-shadow: 0 4px 30px rgba(0,0,0,1);
-          margin: 0; pointer-events: none;
-        }
-        .evolve-phrase.active { pointer-events: all !important; cursor: default; opacity: 1; }
-        .hover-move { display: inline-block; will-change: transform; }
-        .hover-move .char { display: inline-block; will-change: transform, opacity; }
-
-        .phrase-1.active  { animation: flashStrikeIn 0.5s cubic-bezier(0.1,1,0.2,1) forwards; color: var(--accent); }
-        .phrase-1.passed  { animation: flashStrikeOut 0.3s forwards; }
-        .phrase-2.active  { animation: glitchStrikeIn 0.6s cubic-bezier(0.1,1,0.2,1) forwards; color: #fff; text-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent); }
-        .phrase-2.passed  { animation: glitchStrikeOut 0.3s forwards; }
-        .phrase-3.active  { animation: blurStrikeIn 0.5s ease-out forwards; color: var(--accent); }
-        .phrase-3.passed  { animation: blurStrikeOut 0.3s forwards; }
-        .phrase-4.active  { animation: electricStrikeIn 0.5s forwards; color: #fff; text-shadow: 0 0 10px #fff; }
-        .phrase-4.passed  { animation: electricStrikeOut 0.3s forwards; }
-
-        @keyframes flashStrikeIn {
-          0%   { opacity: 0; transform: scale(3) translateZ(200px); filter: brightness(10) blur(20px); }
-          50%  { opacity: 1; filter: brightness(5) blur(0px); }
-          100% { opacity: 1; transform: scale(1) translateZ(0); filter: brightness(1) blur(0px); }
-        }
-        @keyframes flashStrikeOut {
-          0%   { opacity: 1; transform: scale(1); filter: brightness(1); }
-          100% { opacity: 0; transform: scale(0.5) translateY(-100px); filter: brightness(5) blur(10px); }
-        }
-        @keyframes glitchStrikeIn {
-          0%   { opacity: 0; transform: skewX(-40deg) scale(1.5); filter: brightness(10); clip-path: polygon(0 0,100% 0,100% 10%,0 10%); }
-          15%  { opacity: 1; transform: skewX(30deg) scale(1.3); clip-path: polygon(0 20%,100% 20%,100% 40%,0 40%); filter: brightness(5); }
-          30%  { transform: skewX(-20deg) scale(1.1); clip-path: polygon(0 40%,100% 40%,100% 60%,0 60%); }
-          45%  { transform: skewX(10deg) scale(1.05); clip-path: polygon(0 60%,100% 60%,100% 80%,0 80%); }
-          60%  { transform: skewX(0deg) scale(1); clip-path: polygon(0 0,100% 0,100% 100%,0 100%); filter: brightness(3); }
-          100% { opacity: 1; transform: skewX(0deg) scale(1); filter: brightness(1); clip-path: none; }
-        }
-        @keyframes glitchStrikeOut {
-          0%   { opacity: 1; transform: scale(1); filter: brightness(1); }
-          50%  { opacity: 1; transform: skewX(20deg) scale(1.2); filter: brightness(5); }
-          100% { opacity: 0; transform: skewX(-40deg) scale(0.2) translateY(-100px); filter: brightness(10); }
-        }
-        @keyframes blurStrikeIn {
-          0%   { opacity: 0; transform: translateX(200px) scale(2); filter: blur(30px) brightness(5); letter-spacing: 40px; }
-          100% { opacity: 1; transform: translateX(0) scale(1); filter: blur(0px) brightness(1); letter-spacing: -0.02em; }
-        }
-        @keyframes blurStrikeOut {
-          0%   { opacity: 1; transform: translateX(0) scale(1); filter: blur(0px) brightness(1); }
-          100% { opacity: 0; transform: translateX(-200px) scale(0.5); filter: blur(30px) brightness(5); letter-spacing: -20px; }
-        }
-        @keyframes electricStrikeIn {
-          0%   { opacity: 0; filter: contrast(10) brightness(10) invert(1); transform: scale(1.5); }
-          10%  { opacity: 1; filter: contrast(1) brightness(1) invert(0); }
-          20%  { opacity: 0; filter: contrast(10) brightness(10) invert(1); transform: scale(1.2); }
-          30%  { opacity: 1; filter: contrast(1) brightness(1) invert(0); }
-          40%  { opacity: 0; filter: contrast(5) brightness(5); }
-          100% { opacity: 1; transform: scale(1); filter: none; }
-        }
-        @keyframes electricStrikeOut {
-          0%   { opacity: 1; transform: scale(1); }
-          10%  { opacity: 0; filter: brightness(10); }
-          20%  { opacity: 1; filter: brightness(1); }
-          100% { opacity: 0; transform: scale(3); filter: blur(20px) brightness(5); }
-        }
-      `}</style>
     </>
   );
 }
