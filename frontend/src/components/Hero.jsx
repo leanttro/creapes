@@ -1,21 +1,12 @@
 import { useState } from 'react';
 
 /**
- * Hero — seção full-screen com carrossel de slides (vídeo de fundo)
- * e lista de títulos lateral inferior, igual ao original.
+ * Hero — carrossel full-screen igual ao original Jinja.
  *
- * No HTML original, `hero_videos` era filtrado em Jinja a partir de
- * `produtos` cuja categoria contivesse "hero". Aqui isso já chega
- * pronto via prop `slides` (ver valores de exemplo em lib/api.js ->
- * heroSlides), e o componente apenas itera.
- *
- * goToSlide() existia como função global no <script> solto; agora é
- * state local (currentSlide) trocado no onMouseEnter de cada título,
- * exatamente como o onmouseenter="goToSlide(i)" original.
- *
- * O clique no slide ou no título navegava para `/case/{{ p.id }}`;
- * aqui vira navegação simples via window.location, já que ainda não
- * há router instalado neste passo (App.jsx cuida disso depois).
+ * MUDANÇAS em relação à versão anterior:
+ * - bgVideo já chega convertido para player.vimeo.com (feito no Home.jsx)
+ * - iframe usa allow="autoplay; fullscreen; picture-in-picture" + allowFullScreen
+ * - play-link com useNavigate (react-router) em vez de window.location
  */
 export default function Hero({ slides = [] }) {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -34,25 +25,37 @@ export default function Hero({ slides = [] }) {
   return (
     <header className="hero" id="hero">
       {slides.map((slide, index) => (
-        <div key={slide.id} className={`slide ${index === currentSlide ? 'active' : ''}`}>
+        <div
+          key={slide.id}
+          className={`slide${index === currentSlide ? ' active' : ''}`}
+        >
+          {/* ── Background: Vimeo embed ou vídeo direto ── */}
           {slide.isVimeo ? (
             <div
               style={{
-                position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                position: 'absolute', top: 0, left: 0,
+                width: '100%', height: '100%',
                 overflow: 'hidden', zIndex: -1, pointerEvents: 'none',
               }}
             >
               <iframe
-                title={`bg-vimeo-${slide.id}`}
+                title={`bg-${slide.id}`}
                 src={`${slide.bgVideo}${slide.bgVideo.includes('?') ? '&' : '?'}background=1&autoplay=1&loop=1&muted=1&autopause=0`}
                 style={{
-                  width: '100%', height: '56.25vw', minHeight: '100vh', minWidth: '177.77vh',
-                  position: 'absolute', top: '50%', left: '50%',
+                  width: '100%',
+                  height: '56.25vw',
+                  minHeight: '100vh',
+                  minWidth: '177.77vh',
+                  position: 'absolute',
+                  top: '50%', left: '50%',
                   transform: 'translate(-50%, -50%) translateZ(0)',
-                  backfaceVisibility: 'hidden', border: 'none',
-                  filter: 'brightness(0.6)', pointerEvents: 'none',
+                  backfaceVisibility: 'hidden',
+                  border: 'none',
+                  filter: 'brightness(0.6)',
+                  pointerEvents: 'none',
                 }}
                 allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
               />
             </div>
           ) : (
@@ -64,27 +67,38 @@ export default function Hero({ slides = [] }) {
                 muted
                 playsInline
                 style={{
-                  width: '100%', height: '100%', objectFit: 'cover',
-                  position: 'absolute', top: 0, left: 0, zIndex: -1,
-                  filter: 'brightness(0.6)', pointerEvents: 'none',
+                  width: '100%', height: '100%',
+                  objectFit: 'cover',
+                  position: 'absolute', top: 0, left: 0,
+                  zIndex: -1,
+                  filter: 'brightness(0.6)',
+                  pointerEvents: 'none',
                 }}
               />
             )
           )}
 
-          <div className="play-link" onClick={() => goToCase(slide.caseId)}></div>
+          {/* Área clicável do slide */}
+          <div
+            className="play-link"
+            onClick={() => goToCase(slide.caseId)}
+          />
         </div>
       ))}
 
+      {/* ── Lista de títulos lateral inferior ── */}
       <div className="hero-titles-list">
         {slides.map((slide, index) => (
           <h1
             key={slide.id}
-            className={`hero-title-item ${index === currentSlide ? 'active' : ''}`}
+            className={`hero-title-item${index === currentSlide ? ' active' : ''}`}
             onMouseEnter={() => goToSlide(index)}
             onClick={() => goToCase(slide.caseId)}
           >
-            {slide.nome} <span className="year">{slide.ano}</span>
+            {slide.nome}{' '}
+            {slide.ano && (
+              <span className="year">{slide.ano}</span>
+            )}
           </h1>
         ))}
       </div>
@@ -115,7 +129,10 @@ export default function Hero({ slides = [] }) {
         }
 
         .play-link {
-          display: block; width: 100%; height: 100%; position: relative; cursor: pointer;
+          display: block;
+          width: 100%; height: 100%;
+          position: relative;
+          cursor: pointer;
         }
 
         .hero-titles-list {
@@ -132,7 +149,7 @@ export default function Hero({ slides = [] }) {
           font-size: clamp(2.5rem, 5vw, 4.5rem);
           color: rgba(245, 245, 247, 0.4);
           cursor: pointer;
-          transition: all 0.3s var(--ease);
+          transition: color 0.3s var(--ease);
           line-height: 1;
           letter-spacing: -0.03em;
           margin: 0;
@@ -140,7 +157,8 @@ export default function Hero({ slides = [] }) {
           align-items: flex-start;
         }
 
-        .hero-title-item.active, .hero-title-item:hover {
+        .hero-title-item.active,
+        .hero-title-item:hover {
           color: var(--text);
         }
 
@@ -154,12 +172,20 @@ export default function Hero({ slides = [] }) {
           transition: opacity 0.3s;
         }
 
-        .hero-title-item.active .year, .hero-title-item:hover .year {
+        .hero-title-item.active .year,
+        .hero-title-item:hover .year {
           opacity: 1;
         }
 
         @media (max-width: 900px) {
-          .hero-titles-list { left: 2rem; bottom: 3rem; }
+          .hero-titles-list {
+            left: 2rem;
+            bottom: 3rem;
+          }
+
+          .hero-title-item {
+            font-size: clamp(1.8rem, 7vw, 3rem);
+          }
         }
       `}</style>
     </header>
