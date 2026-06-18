@@ -11,6 +11,10 @@ export default function Loader({ onComplete }) {
   const topPanelRef = useRef(null);
   const botPanelRef = useRef(null);
 
+  // Captura onComplete em ref para não re-disparar o useEffect quando o pai re-renderiza
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+
   useEffect(() => {
     const brandName = 'LOADING';
     const brandEl = brandRef.current;
@@ -30,7 +34,7 @@ export default function Loader({ onComplete }) {
 
     const tl = gsap.timeline({
       onComplete: () => {
-        if (onComplete) onComplete();
+        if (onCompleteRef.current) onCompleteRef.current();
         if (loaderRef.current) loaderRef.current.style.display = 'none';
       },
     });
@@ -66,7 +70,8 @@ export default function Loader({ onComplete }) {
     return () => {
       tl.kill();
     };
-  }, [onComplete]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div id="loader" ref={loaderRef}>
