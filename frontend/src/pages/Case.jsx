@@ -6,7 +6,7 @@ import { getCases, getConfig } from '../lib/api';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// ── Converte nome do case em slug para a URL ──────────────────────────────────
+// ── Converte nome em slug para a URL ─────────────────────────────────────────
 function toSlug(nome) {
   return nome
     .toLowerCase()
@@ -36,92 +36,69 @@ function buildVimeoPlayerUrl(url) {
   return final;
 }
 
-function buildVimeoEmbedUrl(url) {
-  if (!url) return null;
-  if (url.includes('player.vimeo.com')) return url;
-  const clean = url.split('?')[0].replace(/\/$/, '');
-  const parts = clean.split('/');
-  if (parts.length >= 5) return `https://player.vimeo.com/video/${parts[3]}?h=${parts[4]}`;
-  if (parts.length === 4) return `https://player.vimeo.com/video/${parts[3]}`;
-  return null;
-}
-
-function buildVimeoPlayerUrl(url) {
-  if (!url) return null;
-  let final = buildVimeoEmbedUrl(url) || url;
-  if (!final.includes('autoplay')) final += (final.includes('?') ? '&' : '?') + 'autoplay=1';
-  return final;
-}
-
-
 export default function Case() {
   const { slug } = useParams();
   const navigate = useNavigate();
 
-  const [prod, setProd]           = useState(null);
-  const [proximo, setProximo]     = useState(null);
-  const [siteLogo, setSiteLogo]   = useState(LOGO_FALLBACK);
-  const [siteWpp, setSiteWpp]     = useState('');
-  const [loading, setLoading]     = useState(true);
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [prod, setProd]         = useState(null);
+  const [proximo, setProximo]   = useState(null);
+  const [siteLogo, setSiteLogo] = useState(LOGO_FALLBACK);
+  const [siteWpp, setSiteWpp]   = useState('');
+  const [loading, setLoading]   = useState(true);
 
   const [videoModal, setVideoModal] = useState(false);
   const [videoUrl, setVideoUrl]     = useState('');
   const [nextBgVisible, setNextBgVisible] = useState(false);
 
-  // Cursor personalizado
-  const cursorBallRef = useRef(null);
-  const cursorRingRef = useRef(null);
+  // Refs
+  const cursorBallRef  = useRef(null);
+  const cursorRingRef  = useRef(null);
   const mx = useRef(window.innerWidth / 2);
   const my = useRef(window.innerHeight / 2);
   const rx = useRef(mx.current);
   const ry = useRef(my.current);
-  const rafCursor = useRef(null);
-
-  // BTS drag scroll
-  const btsRef = useRef(null);
-  const btsDown = useRef(false);
-  const btsStartX = useRef(0);
-  const btsSLeft = useRef(0);
-
-  const heroMediaRef = useRef(null);
+  const rafCursor      = useRef(null);
+  const btsRef         = useRef(null);
+  const btsDown        = useRef(false);
+  const btsStartX      = useRef(0);
+  const btsSLeft       = useRef(0);
+  const heroMediaRef   = useRef(null);
   const heroContentRef = useRef(null);
 
-  // ── Fetch do case pelo slug ───────────────────────────────────────────────
+  // ── Fetch case pelo slug + config ────────────────────────────────────────
   useEffect(() => {
     setLoading(true);
     getCases()
       .then((cases) => {
-        // Encontra o case cujo slug bate
         const found = cases.find((c) => toSlug(c.nome) === slug);
         if (!found) { setLoading(false); return; }
 
-        // Monta o objeto normalizado igual ao Home usa
-        const normalizado = {
+        setProd({
           ...found,
-          descricao:  found.descricao || '',
-          resumo:     found.resumo    || found.descricao || '',
-          depoimento: found.depoimento || '',
+          descricao:     found.descricao     || '',
+          resumo:        found.resumo        || found.descricao || '',
+          depoimento:    found.depoimento    || '',
           ficha_tecnica: found.ficha_tecnica || '',
-          diretor:    found.diretor   || null,
-          dop:        found.dop       || null,
-          estoque:    found.estoque   || found.ano || '',
-          categoria:  found.categoria_nome
-                        ? { nome: found.categoria_nome }
-                        : found.categoria || null,
+          diretor:       found.diretor       || null,
+          dop:           found.dop           || null,
+          estoque:       found.estoque       || found.ano || '',
+          categoria:     found.categoria_nome
+                           ? { nome: found.categoria_nome }
+                           : found.categoria || null,
           whatsapp_projeto: found.whatsapp_projeto || '',
-        };
-        setProd(normalizado);
+        });
 
-        // Próximo case (excluindo o atual)
+        // Próximo case
         const outros = cases.filter((c) => c.id !== found.id);
         if (outros.length > 0) {
           const prox = outros[0];
           setProximo({
-            slug:     toSlug(prox.nome),
-            nome:     prox.nome,
+            slug:      toSlug(prox.nome),
+            nome:      prox.nome,
             descricao: prox.descricao || '',
-            estoque:  prox.estoque || prox.ano || '',
-            imagem:   prox.imagem || null,
+            estoque:   prox.estoque   || prox.ano || '',
+            imagem:    prox.imagem    || null,
           });
         }
         setLoading(false);
@@ -137,6 +114,7 @@ export default function Case() {
       .catch(() => {});
   }, [slug]);
 
+  // ── Funções de vídeo ──────────────────────────────────────────────────────
   function openVideo(url) {
     const final = buildVimeoPlayerUrl(url);
     if (!final) return;
@@ -151,7 +129,7 @@ export default function Case() {
     document.body.style.overflow = '';
   }
 
-  // ── Cursor ───────────────────────────────────────────────────────────────
+  // ── Cursor ────────────────────────────────────────────────────────────────
   useEffect(() => {
     function onMouseMove(e) { mx.current = e.clientX; my.current = e.clientY; }
     document.addEventListener('mousemove', onMouseMove);
@@ -179,8 +157,10 @@ export default function Case() {
     };
   }, []);
 
-  // ── GSAP page entry + scroll ──────────────────────────────────────────────
+  // ── GSAP — só roda depois que prod carregou ───────────────────────────────
   useEffect(() => {
+    if (!prod) return;
+
     document.body.classList.add('loading');
 
     const tl = gsap.timeline({
@@ -195,7 +175,6 @@ export default function Case() {
       .to('#navBrand',        { opacity: 1, y: 0, duration: 0.5 }, '-=.4')
       .to('#navCta',          { opacity: 1, x: 0, duration: 0.5 }, '-=.4');
 
-    // Scroll fade-ins
     document.querySelectorAll('.case-fade-in').forEach(el => {
       gsap.fromTo(el,
         { opacity: 0, y: 50 },
@@ -204,27 +183,23 @@ export default function Case() {
       );
     });
 
-    // Counter items
-    ['c1','c2','c3','c4'].forEach((id, i) => {
-      const el = document.getElementById(id);
+    ['c1','c2','c3','c4'].forEach((cid, i) => {
+      const el = document.getElementById(cid);
       if (el) gsap.to(el, { opacity: 1, y: 0, duration: 0.7, delay: i * 0.1, ease: 'expo.out',
         scrollTrigger: { trigger: el, start: 'top 90%' } });
     });
 
-    // Dividers
     ['div1','div2','div3'].forEach(did => {
       const el = document.getElementById(did);
       if (el) gsap.to(el, { scaleX: 1, duration: 1.2, ease: 'expo.out',
         scrollTrigger: { trigger: el, start: 'top 90%' } });
     });
 
-    // Table rows
     gsap.utils.toArray('.detail-row').forEach((row, i) => {
       gsap.to(row, { opacity: 1, x: 0, duration: 0.5, delay: i * 0.08, ease: 'expo.out',
         scrollTrigger: { trigger: row, start: 'top 90%' } });
     });
 
-    // Parallax hero
     if (heroMediaRef.current) {
       gsap.to(heroMediaRef.current, { yPercent: 0, ease: 'none',
         scrollTrigger: { trigger: '.case-hero', start: 'top top', end: 'bottom top', scrub: true } });
@@ -238,7 +213,7 @@ export default function Case() {
       tl.kill();
       ScrollTrigger.getAll().forEach(t => t.kill());
     };
-  }, [id]);
+  }, [prod]);
 
   // ── ESC fecha modal ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -267,22 +242,18 @@ export default function Case() {
     };
   }, []);
 
+  // ── Loading / not found ───────────────────────────────────────────────────
+  if (loading) return (
+    <div style={{ background:'#0a0a0a', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <span style={{ color:'rgba(240,240,240,0.3)', fontFamily:'Space Grotesk,sans-serif', fontSize:'.8rem', textTransform:'uppercase', letterSpacing:'.2em' }}>Carregando...</span>
+    </div>
+  );
 
-  if (loading) {
-    return (
-      <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'rgba(240,240,240,0.3)', fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '.2em', fontSize: '.8rem', textTransform: 'uppercase' }}>Carregando...</div>
-      </div>
-    );
-  }
-
-  if (!prod) {
-    return (
-      <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'rgba(240,240,240,0.3)', fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '.2em', fontSize: '.8rem', textTransform: 'uppercase' }}>Case não encontrado.</div>
-      </div>
-    );
-  }
+  if (!prod) return (
+    <div style={{ background:'#0a0a0a', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <span style={{ color:'rgba(240,240,240,0.3)', fontFamily:'Space Grotesk,sans-serif', fontSize:'.8rem', textTransform:'uppercase', letterSpacing:'.2em' }}>Case não encontrado.</span>
+    </div>
+  );
 
   const embedUrl = buildVimeoEmbedUrl(prod.link_projeto);
   const whatsapp = prod.whatsapp_projeto || siteWpp;
@@ -296,18 +267,15 @@ export default function Case() {
 
   const detailRows = [
     { label: 'Projeto',       value: prod.nome },
-    prod.estoque   && { label: 'Ano',           value: prod.estoque },
-    prod.descricao && { label: 'Estilo / Local', value: prod.descricao },
-    prod.categoria && { label: 'Seção',          value: prod.categoria.nome },
-                       { label: 'Produtora',     value: NOME_PRODUTORA },
-    prod.diretor   && { label: 'Direção',         value: prod.diretor },
-    prod.dop       && { label: 'Dir. Fotografia', value: prod.dop },
-    prod.link_projeto && {
-      label: 'Assistir',
-      value: null,
-      link: prod.link_projeto,
-    },
+    prod.estoque      && { label: 'Ano',            value: prod.estoque },
+    prod.descricao    && { label: 'Estilo / Local',  value: prod.descricao },
+    prod.categoria    && { label: 'Seção',           value: prod.categoria.nome },
+                          { label: 'Produtora',      value: NOME_PRODUTORA },
+    prod.diretor      && { label: 'Direção',          value: prod.diretor },
+    prod.dop          && { label: 'Dir. Fotografia',  value: prod.dop },
+    prod.link_projeto && { label: 'Assistir', value: null, link: prod.link_projeto },
   ].filter(Boolean);
+
   return (
     <>
       {/* ── Custom cursor ── */}
@@ -322,15 +290,16 @@ export default function Case() {
           <svg viewBox="0 0 24 24"><polyline points="19 12 5 12"/><polyline points="12 5 5 12 12 19"/></svg>
           Voltar
         </a>
+
+        {/* LOGO igual ao Home */}
         <div className="nav-brand" id="navBrand">
-          <img src={siteLogo} alt={NOME_PRODUTORA} style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }} />
+          <img src={siteLogo} alt={NOME_PRODUTORA} style={{ height:'32px', width:'auto', objectFit:'contain', display:'block' }} />
         </div>
+
         {whatsapp && (
-          <a
-            href={`https://wa.me/55${whatsapp.replace(/\D/g, '')}`}
-            target="_blank" rel="noreferrer"
-            className="nav-cta" id="navCta"
-          >Fale Conosco</a>
+          <a href={`https://wa.me/55${whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="nav-cta" id="navCta">
+            Fale Conosco
+          </a>
         )}
       </nav>
 
@@ -359,7 +328,7 @@ export default function Case() {
 
         <div className="hero-content" ref={heroContentRef}>
           <div className="hero-meta">
-            <span className="hero-tag" id="heroTag">{prod.categoria?.nome || 'Projeto'}</span>
+            <span className="hero-tag"      id="heroTag">{prod.categoria?.nome || 'Projeto'}</span>
             <span className="hero-category" id="heroCategory">{prod.descricao || 'Audiovisual'}</span>
           </div>
           <h1 className="hero-title">
@@ -376,10 +345,10 @@ export default function Case() {
       {/* ── Counter bar ── */}
       <div className="counter-bar">
         {[
-          { label: 'Ano',       value: prod.estoque || '—', accent: false },
-          { label: 'Categoria', value: prod.categoria?.nome || 'Portfolio', small: true },
-          { label: 'Estilo / Local', value: prod.descricao || '—', small: true },
-          { label: 'Produtora', value: NOME_PRODUTORA, small: true, accent: true },
+          { label: 'Ano',            value: prod.estoque || '—',                 accent: false },
+          { label: 'Categoria',      value: prod.categoria?.nome || 'Portfolio', small: true },
+          { label: 'Estilo / Local', value: prod.descricao || '—',               small: true },
+          { label: 'Produtora',      value: NOME_PRODUTORA,                      small: true, accent: true },
         ].map((item, i) => (
           <div className="counter-item" id={`c${i+1}`} key={i}>
             <div className="counter-label">{item.label}</div>
@@ -589,9 +558,6 @@ export default function Case() {
         .nav-back svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.5; }
         .nav-back:hover { color: var(--accent); }
         .nav-brand {
-          font-family: 'Space Grotesk', sans-serif;
-          font-size: 1.1rem; font-weight: 700; letter-spacing: .08em;
-          text-transform: uppercase; color: #fff;
           opacity: 0; transform: translateY(-10px);
           transition: opacity .4s .1s, transform .4s .1s;
         }
