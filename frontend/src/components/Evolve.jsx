@@ -142,6 +142,17 @@ export default function Evolve({
     }
 
     // Cálculo inicial (equivalente ao window.addEventListener('load', ...))
+    // Fix React: a frase 0 nasce com "active" no JSX (diferente do HTML puro
+    // onde a classe era adicionada dinamicamente). O browser não re-dispara
+    // a animação CSS se a classe já estava lá no mount. Força reflow para
+    // resetar a animação antes do primeiro calcScroll.
+    const firstPhrase = evolvePhrases[0];
+    if (firstPhrase) {
+      firstPhrase.classList.remove('active');
+      // eslint-disable-next-line no-unused-expressions
+      firstPhrase.offsetWidth; // reflow — reseta a animação
+      firstPhrase.classList.add('active');
+    }
     calcScroll();
     updateEvolveCurtain();
 
@@ -294,7 +305,7 @@ export default function Evolve({
               <h2
                 key={phrase.id}
                 ref={(el) => (phraseRefs.current[index] = el)}
-                className={`evolve-phrase ${phrase.className} ${index === 0 ? 'active' : ''}`}
+                className={`evolve-phrase ${phrase.className}`}
               >
                 <span className="hover-move">{phrase.text}</span>
               </h2>
