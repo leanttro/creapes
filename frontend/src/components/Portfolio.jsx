@@ -4,49 +4,17 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-/**
- * Portfolio — seção de scroll horizontal "cinematográfico": a section
- * inteira fica pinada (pin: true) enquanto o usuário rola verticalmente,
- * e esse scroll é traduzido em translateX na track (scrub: 1), exatamente
- * como o gsap.to(portfolioTrack, { x: -scrollDistance, scrollTrigger: {...} })
- * do original.
- *
- * Dados: no HTML, `port_videos` vinha do Jinja filtrando produtos da
- * categoria "portfolio". Aqui chega como prop `items` (ver portfolioItems
- * em lib/api.js). O padrão de tamanho/alinhamento alternado
- * (size-l/size-sq/size-s, align-top/center/bottom, translateY do
- * nth-child) é recalculado em JS a partir do índice, replicando a mesma
- * regra de "loop.index % 3 == 0", "% 2 == 0" etc do original.
- *
- * Fidelidade ao ScrollTrigger original:
- * - trigger: a própria section (.portfolio-horizontal-wrapper)
- * - start: 'top top', end: dinâmico (+= scrollDistance)
- * - pin: true, scrub: 1, anticipatePin: 1
- * - scrollDistance = track.scrollWidth - viewportWidth (calculado depois
- *   do layout estar montado, igual ao original que roda no <script> ao
- *   final do body).
- *
- * Cleanup: o ScrollTrigger criado é killado no unmount para não duplicar
- * pins ao desmontar/remontar o componente (ex: hot reload, navegação).
- *
- * FIX DE PERFORMANCE (corrigido agora):
- * - Antes: TODOS os itens do portfólio montavam seu iframe do Vimeo com
- *   autoplay=1 de uma vez só, mesmo os que estavam fora da área visível
- *   (o scroll horizontal pinado só move a track via transform, então
- *   "fora da tela" não significa "fora do DOM"). Isso somava aos players
- *   já tocando no Hero, multiplicando requests/xhr e travando a navegação.
- * - Agora: cada port-item usa IntersectionObserver pra só montar o
- *   iframe/video quando o card entra (ou está próximo) da viewport, e
- *   desmonta quando sai. Como o scroll é horizontal via transform, o
- *   threshold/rootMargin do observer funciona normalmente (ele observa
- *   a posição real do elemento na tela, não a posição no fluxo do DOM).
- */
 export default function Portfolio({ items = [] }) {
   const sectionRef = useRef(null);
   const trackRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 900);
 
-  // Define tamanho e alinhamento de cada item seguindo a mesma regra
-  // de módulo usada no Jinja original (loop.index começa em 1).
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 900);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   function getSizeClass(loopIndex) {
     if (loopIndex % 3 === 0) return 'size-s';
     if (loopIndex % 2 === 0) return 'size-sq';
@@ -59,8 +27,10 @@ export default function Portfolio({ items = [] }) {
     return 'align-center';
   }
 
-
+  // GSAP só roda no desktop
   useEffect(() => {
+    if (isMobile) return;
+
     const section = sectionRef.current;
     const track = trackRef.current;
     if (!section || !track) return;
@@ -83,17 +53,15 @@ export default function Portfolio({ items = [] }) {
     });
 
     return () => {
-      // Mata o ScrollTrigger associado e o tween para não deixar pin
-      // fantasma se o componente for desmontado/remontado.
       tween.scrollTrigger?.kill();
       tween.kill();
     };
-  }, [items]);
+  }, [items, isMobile]);
 
   if (items.length === 0) return null;
 
   return (
-    <section id="work" className="portfolio-horizontal-wrapper" ref={sectionRef}>
+    <section id="work" className={`portfolio-horizontal-wrapper${isMobile ? ' is-mobile' : ''}`} ref={sectionRef}>
       <div className="portfolio-sticky">
         <div className="portfolio-bg-animation"></div>
         <div className="portfolio-glow"></div>
@@ -108,10 +76,9 @@ export default function Portfolio({ items = [] }) {
 
         <div className="portfolio-track" ref={trackRef}>
           {items.map((item, idx) => {
-            const loopIndex = idx + 1; // equivalente a loop.index (1-based) do Jinja
+            const loopIndex = idx + 1;
             const sizeClass = getSizeClass(loopIndex);
             const wrapperAlignClass = getWrapperAlignClass(loopIndex);
-
             const captionParts = [item.descricao, item.ano].filter(Boolean);
 
             return (
@@ -121,6 +88,7 @@ export default function Portfolio({ items = [] }) {
                 wrapperAlignClass={wrapperAlignClass}
                 sizeClass={sizeClass}
                 captionParts={captionParts}
+                isMobile={isMobile}
               />
             );
           })}
@@ -128,6 +96,7 @@ export default function Portfolio({ items = [] }) {
       </div>
 
       <style>{`
+        /* ── DESKTOP (sem alteração) ── */
         .portfolio-horizontal-wrapper {
           height: 100vh;
           position: relative;
@@ -274,8 +243,7 @@ export default function Portfolio({ items = [] }) {
 
         .port-item-caption {
           position: absolute;
-          bottom: 1rem;
-          right: 1rem;
+          bottom: 1rem; right: 1rem;
           font-family: 'Inter', sans-serif;
           font-size: 0.7rem;
           color: rgba(255, 255, 255, 0.5);
@@ -287,27 +255,97 @@ export default function Portfolio({ items = [] }) {
           transition: opacity 0.5s var(--ease);
         }
 
-        .port-item:hover .port-item-caption {
-          opacity: 1;
-        }
+        .port-item:hover .port-item-caption { opacity: 1; }
 
+        /* ── MOBILE: scroll horizontal nativo, sem GSAP, sem pin ── */
         @media (max-width: 900px) {
-          .portfolio-track { gap: 20vw; height: 60vh; margin-top: 15vh; padding: 0 60vw 0 10vw; }
-          .size-l, .size-sq, .size-s { width: 50vw; }
+          /* Section vira altura auto — sem pin, sem 100vh travado */
+          .portfolio-horizontal-wrapper.is-mobile {
+            height: auto;
+          }
+
+          /* sticky vira container normal */
+          .portfolio-horizontal-wrapper.is-mobile .portfolio-sticky {
+            height: auto;
+            overflow: visible;
+            padding: 5rem 0 4rem;
+          }
+
+          /* track: scroll horizontal nativo com snap */
+          .portfolio-horizontal-wrapper.is-mobile .portfolio-track {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: visible;
+            -webkit-overflow-scrolling: touch;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+            gap: 1.5rem;
+            padding: 2rem 1.5rem 3rem;
+            height: auto;
+            margin-top: 0;
+            align-items: center;
+            will-change: unset;
+          }
+
+          .portfolio-horizontal-wrapper.is-mobile .portfolio-track::-webkit-scrollbar {
+            display: none;
+          }
+
+          /* cards: tamanho fixo, alinhamento reto, sem translateY */
+          .portfolio-horizontal-wrapper.is-mobile .port-wrapper {
+            transform: none !important;
+            flex-shrink: 0;
+            scroll-snap-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.8rem;
+          }
+
+          /* quote vira texto normal abaixo do card */
+          .portfolio-horizontal-wrapper.is-mobile .phrase-quote-block {
+            position: static;
+            transform: none;
+            max-width: 72vw;
+            width: 72vw;
+            font-size: clamp(0.8rem, 3.5vw, 1.1rem);
+            padding-left: 0.8rem;
+            white-space: normal;
+          }
+
+          /* todos os tamanhos viram iguais no mobile */
+          .portfolio-horizontal-wrapper.is-mobile .size-l,
+          .portfolio-horizontal-wrapper.is-mobile .size-sq,
+          .portfolio-horizontal-wrapper.is-mobile .size-s {
+            width: 72vw;
+            aspect-ratio: 16/9;
+          }
+
+          /* info fica sempre visível no mobile (sem hover) */
+          .portfolio-horizontal-wrapper.is-mobile .port-info {
+            bottom: 0;
+          }
+
+          .portfolio-horizontal-wrapper.is-mobile .port-item-caption {
+            opacity: 1;
+          }
+
+          /* título */
+          .portfolio-horizontal-wrapper.is-mobile .portfolio-section-title {
+            position: relative;
+            top: auto; left: auto;
+            padding: 0 1.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+          }
         }
       `}</style>
     </section>
   );
 }
 
-/**
- * PortfolioItem — extraído em componente próprio só para poder usar
- * IntersectionObserver individual por card (precisa de uma ref por item).
- * Estrutura visual/classes idênticas à versão anterior; a única mudança
- * de comportamento é o gate "isVisible" controlando se o iframe/video
- * é montado ou não.
- */
-function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts }) {
+function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts, isMobile }) {
   const itemRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -317,15 +355,10 @@ function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts }) {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          setIsVisible(entry.isIntersecting);
-        });
+        entries.forEach((entry) => setIsVisible(entry.isIntersecting));
       },
       {
         root: null,
-        // rootMargin generoso na horizontal: como o scroll é via transform,
-        // isso garante que o vídeo já comece a carregar um pouco antes de
-        // entrar 100% na tela (evita "pop-in" do vídeo).
         rootMargin: '0px 50% 0px 50%',
         threshold: 0.01,
       }
@@ -340,7 +373,8 @@ function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts }) {
       className={`port-wrapper ${wrapperAlignClass}`}
       style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center' }}
     >
-      {item.descricao && (
+      {/* No mobile o quote fica abaixo do card (order via flex-direction column no CSS) */}
+      {!isMobile && item.descricao && (
         <div
           className="phrase-quote-block"
           style={{
@@ -357,9 +391,7 @@ function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts }) {
       <div
         ref={itemRef}
         className={`port-item ${sizeClass}`}
-        onClick={() => {
-          window.location.href = `/case/${item.id}`;
-        }}
+        onClick={() => { window.location.href = `/case/${item.id}`; }}
       >
         {isVisible && item.isVimeo && item.bgLink ? (
           <div
@@ -384,6 +416,13 @@ function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts }) {
         </div>
         <div className="port-item-caption">{captionParts.join(' | ')}</div>
       </div>
+
+      {/* No mobile o quote aparece abaixo do card */}
+      {isMobile && item.descricao && (
+        <div className="phrase-quote-block">
+          {item.descricao}
+        </div>
+      )}
     </div>
   );
 }
