@@ -158,7 +158,7 @@ export default function Evolve({
       const hoverText = phrase.querySelector('.hover-move');
       if (!hoverText) return;
 
-      const originalText = hoverText.dataset.original || hoverText.innerText;
+      const originalText = hoverText.dataset.original || hoverText.textContent.trim();
       hoverText.dataset.original = originalText;
       hoverText.innerHTML = originalText
         .split('')
