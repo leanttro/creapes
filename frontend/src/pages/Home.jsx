@@ -50,6 +50,7 @@ export default function Home() {
   const [heroSlides, setHeroSlides] = useState([]);
   const [portfolioItems, setPortfolioItems] = useState([]);
   const [clientLogos, setClientLogos] = useState([]);
+  const [logosClientesRaw, setLogosClientesRaw] = useState('');
 
   // ── Fetch dados do backend ─────────────────────────────────────────────────
   useEffect(() => {
@@ -106,7 +107,9 @@ export default function Home() {
           linkedinUrl: SITE_FALLBACK.linkedinUrl,
         });
         if (config.logos_clientes || config.clientes_logos) {
-          const urls = (config.logos_clientes || config.clientes_logos)
+          const raw = config.logos_clientes || config.clientes_logos;
+          setLogosClientesRaw(raw);
+          const urls = raw
             .split('\n')
             .map((u) => u.trim())
             .filter(Boolean);
@@ -190,7 +193,7 @@ export default function Home() {
         </Suspense>
 
         <Suspense fallback={null}>
-          <InstagramFeed posts={[]} />
+          <InstagramFeed logosClientes={logosClientesRaw} />
         </Suspense>
 
         <Footer
