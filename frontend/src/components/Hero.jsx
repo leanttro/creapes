@@ -47,8 +47,8 @@ export default function Hero({ slides = [] }) {
             key={slide.id}
             className={`slide${isActive ? ' active' : ''}`}
           >
-            {/* ── Background: só monta vídeo/iframe se o slide estiver ativo ── */}
-            {isActive && slide.isVimeo && (
+            {/* ── Background: slide 0 pré-carrega durante o loader; demais lazy ── */}
+            {(isActive || index === 0) && slide.isVimeo && (
               <div
                 style={{
                   position: 'absolute', top: 0, left: 0,
@@ -78,7 +78,7 @@ export default function Hero({ slides = [] }) {
               </div>
             )}
 
-            {isActive && !slide.isVimeo && slide.bgVideo && (
+            {(isActive || index === 0) && !slide.isVimeo && slide.bgVideo && (
               <video
                 src={slide.bgVideo}
                 autoPlay
