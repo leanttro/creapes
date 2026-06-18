@@ -262,14 +262,6 @@ export default function Home() {
           80%  { transform: translate(3%,35%); }
           90%  { transform: translate(-10%,10%); }
         }
-
-        /* ── MOBILE: bloqueia scroll horizontal ── */
-        @media (max-width: 1024px) {
-          html, body {
-            overflow-x: hidden !important;
-            max-width: 100vw;
-          }
-        }
       `}</style>
     </>
   );
