@@ -3,10 +3,18 @@ import { useState } from 'react';
 /**
  * Hero — carrossel full-screen igual ao original Jinja.
  *
- * MUDANÇAS em relação à versão anterior:
- * - bgVideo já chega convertido para player.vimeo.com (feito no Home.jsx)
- * - iframe usa allow="autoplay; fullscreen; picture-in-picture" + allowFullScreen
- * - play-link com useNavigate (react-router) em vez de window.location
+ * FIX DE PERFORMANCE (corrigido agora):
+ * - Antes: TODOS os slides renderizavam seu iframe do Vimeo simultaneamente,
+ *   mesmo os que não estavam visíveis (só escondidos via opacity/zIndex no CSS).
+ *   Isso fazia N players do Vimeo tocando ao mesmo tempo, cada um com seu xhr
+ *   de vídeo (~2MB+) e heartbeat/ping contínuo — daí a lentidão extrema,
+ *   principalmente ao navegar e voltar pra Home (tudo remonta e dispara de novo).
+ * - Agora: só o slide com index === currentSlide monta o iframe/video de fato.
+ *   Os outros slides continuam existindo no DOM (pra manter a transição de
+ *   opacity funcionando igual) mas sem nenhuma mídia carregada dentro.
+ *
+ * Resto idêntico: bgVideo já chega convertido para player.vimeo.com (Home.jsx),
+ * allow="autoplay; fullscreen; picture-in-picture", play-link com window.location.
  */
 export default function Hero({ slides = [] }) {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -31,42 +39,46 @@ export default function Hero({ slides = [] }) {
 
   return (
     <header className="hero" id="hero">
-      {slides.map((slide, index) => (
-        <div
-          key={slide.id}
-          className={`slide${index === currentSlide ? ' active' : ''}`}
-        >
-          {/* ── Background: Vimeo embed ou vídeo direto ── */}
-          {slide.isVimeo ? (
-            <div
-              style={{
-                position: 'absolute', top: 0, left: 0,
-                width: '100%', height: '100%',
-                overflow: 'hidden', zIndex: -1, pointerEvents: 'none',
-              }}
-            >
-              <iframe
-                title={`bg-${slide.id}`}
-                src={`${slide.bgVideo}${slide.bgVideo.includes('?') ? '&' : '?'}background=1&autoplay=1&loop=1&muted=1&autopause=0`}
+      {slides.map((slide, index) => {
+        const isActive = index === currentSlide;
+
+        return (
+          <div
+            key={slide.id}
+            className={`slide${isActive ? ' active' : ''}`}
+          >
+            {/* ── Background: só monta vídeo/iframe se o slide estiver ativo ── */}
+            {isActive && slide.isVimeo && (
+              <div
                 style={{
-                  width: '100%',
-                  height: '56.25vw',
-                  minHeight: '100vh',
-                  minWidth: '177.77vh',
-                  position: 'absolute',
-                  top: '50%', left: '50%',
-                  transform: 'translate(-50%, -50%) translateZ(0)',
-                  backfaceVisibility: 'hidden',
-                  border: 'none',
-                  filter: 'brightness(0.6)',
-                  pointerEvents: 'none',
+                  position: 'absolute', top: 0, left: 0,
+                  width: '100%', height: '100%',
+                  overflow: 'hidden', zIndex: -1, pointerEvents: 'none',
                 }}
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-          ) : (
-            slide.bgVideo && (
+              >
+                <iframe
+                  title={`bg-${slide.id}`}
+                  src={`${slide.bgVideo}${slide.bgVideo.includes('?') ? '&' : '?'}background=1&autoplay=1&loop=1&muted=1&autopause=0`}
+                  style={{
+                    width: '100%',
+                    height: '56.25vw',
+                    minHeight: '100vh',
+                    minWidth: '177.77vh',
+                    position: 'absolute',
+                    top: '50%', left: '50%',
+                    transform: 'translate(-50%, -50%) translateZ(0)',
+                    backfaceVisibility: 'hidden',
+                    border: 'none',
+                    filter: 'brightness(0.6)',
+                    pointerEvents: 'none',
+                  }}
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            )}
+
+            {isActive && !slide.isVimeo && slide.bgVideo && (
               <video
                 src={slide.bgVideo}
                 autoPlay
@@ -82,16 +94,16 @@ export default function Hero({ slides = [] }) {
                   pointerEvents: 'none',
                 }}
               />
-            )
-          )}
+            )}
 
-          {/* Área clicável do slide */}
-          <div
-            className="play-link"
-            onClick={() => goToCase(slide.caseId)}
-          />
-        </div>
-      ))}
+            {/* Área clicável do slide */}
+            <div
+              className="play-link"
+              onClick={() => goToCase(slide.caseId)}
+            />
+          </div>
+        );
+      })}
 
       {/* ── Lista de títulos lateral inferior ── */}
       <div className="hero-titles-list">
