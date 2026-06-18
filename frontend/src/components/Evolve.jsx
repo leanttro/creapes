@@ -34,11 +34,68 @@ export default function Evolve({
 
     if (!evolveSection) return;
 
+    // — SCATTER SETUP: usa o texto direto do array PHRASES, nunca do DOM —
+    const cleanupScatter = [];
+    evolvePhrases.forEach((phrase, index) => {
+      const hoverText = phrase.querySelector('.hover-move');
+      if (!hoverText) return;
+
+      const originalText = PHRASES[index].text;
+      hoverText.innerHTML = originalText
+        .split('')
+        .map((char) =>
+          char === ' '
+            ? '<span class="char">&nbsp;</span>'
+            : `<span class="char">${char}</span>`
+        )
+        .join('');
+
+      const chars = hoverText.querySelectorAll('.char');
+
+      function onEnter() {
+        if (!phrase.classList.contains('active')) return;
+        gsap.killTweensOf(chars);
+        gsap.to(chars, {
+          opacity: 0,
+          x: () => `random(-150, 150)`,
+          y: () => `random(-150, 150)`,
+          z: () => `random(-50, 150)`,
+          rotationX: () => `random(-360, 360)`,
+          rotationY: () => `random(-360, 360)`,
+          rotationZ: () => `random(-360, 360)`,
+          duration: 1.2,
+          stagger: { amount: 0.15, from: 'center' },
+          ease: 'power2.out',
+        });
+      }
+
+      function onLeave() {
+        gsap.killTweensOf(chars);
+        gsap.to(chars, {
+          opacity: 1,
+          x: 0, y: 0, z: 0,
+          rotationX: 0, rotationY: 0, rotationZ: 0,
+          duration: 1.5,
+          stagger: { amount: 0.15, from: 'center' },
+          ease: 'expo.out',
+        });
+      }
+
+      phrase.addEventListener('mouseenter', onEnter);
+      phrase.addEventListener('mouseleave', onLeave);
+      cleanupScatter.push(() => {
+        phrase.removeEventListener('mouseenter', onEnter);
+        phrase.removeEventListener('mouseleave', onLeave);
+        gsap.killTweensOf(chars);
+      });
+    });
+
     function calcScroll() {
       const windowHeight = window.innerHeight;
       const rect = evolveSection.getBoundingClientRect();
 
       if (rect.top <= 0 && rect.bottom >= windowHeight) {
+        // DENTRO da seção sticky — ativa as frases normalmente
         const totalScroll = rect.height - windowHeight;
         const currentScroll = -rect.top;
         const progress = currentScroll / totalScroll;
@@ -67,19 +124,11 @@ export default function Evolve({
             phrase.className = `evolve-phrase phrase-${index + 1}`;
           }
         });
-      } else if (rect.top > 0) {
+      } else {
+        // FORA da seção sticky — tudo invisível, sem active
         evolveLastIndexRef.current = -1;
         evolvePhrases.forEach((phrase, i) => {
-          phrase.className = i === 0
-            ? `evolve-phrase phrase-${i + 1} active`
-            : `evolve-phrase phrase-${i + 1}`;
-        });
-      } else if (rect.bottom < windowHeight) {
-        evolveLastIndexRef.current = 3;
-        evolvePhrases.forEach((phrase, i) => {
-          phrase.className = i === 3
-            ? `evolve-phrase phrase-${i + 1} active`
-            : `evolve-phrase phrase-${i + 1} passed`;
+          phrase.className = `evolve-phrase phrase-${i + 1}`;
         });
       }
     }
@@ -153,62 +202,6 @@ export default function Evolve({
       evolveSticky.addEventListener('mouseleave', onMouseLeaveSpotlight);
     }
 
-    const cleanupScatter = [];
-    evolvePhrases.forEach((phrase) => {
-      const hoverText = phrase.querySelector('.hover-move');
-      if (!hoverText) return;
-
-      const originalText = hoverText.dataset.original || hoverText.textContent.trim();
-      hoverText.dataset.original = originalText;
-      hoverText.innerHTML = originalText
-        .split('')
-        .map((char) =>
-          char === ' '
-            ? '<span class="char">&nbsp;</span>'
-            : `<span class="char">${char}</span>`
-        )
-        .join('');
-
-      const chars = hoverText.querySelectorAll('.char');
-
-      function onEnter() {
-        if (!phrase.classList.contains('active')) return;
-        gsap.killTweensOf(chars);
-        gsap.to(chars, {
-          opacity: 0,
-          x: () => `random(-150, 150)`,
-          y: () => `random(-150, 150)`,
-          z: () => `random(-50, 150)`,
-          rotationX: () => `random(-360, 360)`,
-          rotationY: () => `random(-360, 360)`,
-          rotationZ: () => `random(-360, 360)`,
-          duration: 1.2,
-          stagger: { amount: 0.15, from: 'center' },
-          ease: 'power2.out',
-        });
-      }
-
-      function onLeave() {
-        gsap.killTweensOf(chars);
-        gsap.to(chars, {
-          opacity: 1,
-          x: 0, y: 0, z: 0,
-          rotationX: 0, rotationY: 0, rotationZ: 0,
-          duration: 1.5,
-          stagger: { amount: 0.15, from: 'center' },
-          ease: 'expo.out',
-        });
-      }
-
-      phrase.addEventListener('mouseenter', onEnter);
-      phrase.addEventListener('mouseleave', onLeave);
-      cleanupScatter.push(() => {
-        phrase.removeEventListener('mouseenter', onEnter);
-        phrase.removeEventListener('mouseleave', onLeave);
-        gsap.killTweensOf(chars);
-      });
-    });
-
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onResize);
@@ -227,7 +220,6 @@ export default function Evolve({
 
   useEffect(() => {
     if (!ready) return;
-
     let id1, id2;
     id1 = requestAnimationFrame(() => {
       id2 = requestAnimationFrame(() => {
@@ -238,7 +230,6 @@ export default function Evolve({
         firstPhrase.classList.add('active');
       });
     });
-
     return () => {
       cancelAnimationFrame(id1);
       cancelAnimationFrame(id2);
@@ -281,9 +272,10 @@ export default function Evolve({
               <h2
                 key={phrase.id}
                 ref={(el) => (phraseRefs.current[index] = el)}
-                className={`evolve-phrase ${phrase.className}${index === 0 ? ' active' : ''}`}
+                className={`evolve-phrase ${phrase.className}`}
               >
-                <span className="hover-move">{phrase.text}</span>
+                {/* span vazio — o useEffect escreve os .char aqui */}
+                <span className="hover-move" />
               </h2>
             ))}
           </div>
