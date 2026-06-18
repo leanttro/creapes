@@ -86,14 +86,23 @@ export default function Home() {
 
         const portfolio = sorted
           .filter((c) => !isHeroCase(c))
-          .map((c) => ({
-            id:        c.id,
-            nome:      c.nome,
-            descricao: c.descricao || '',
-            ano:       c.estoque || c.ano || '',
-            bgLink:    c.link_projeto || null,
-            isVimeo:   c.link_projeto?.includes('vimeo') || false,
-          }));
+          .map((c) => {
+            const isVimeo = c.link_projeto?.includes('vimeo') || false;
+            // Mesma conversão usada na Hero: vimeo.com/ID/HASH -> player.vimeo.com/video/ID?h=HASH
+            // Necessário porque vimeo.com bloqueia embed direto (X-Frame-Options: sameorigin)
+            const bgLink = isVimeo
+              ? (buildVimeoEmbedUrl(c.link_projeto) || c.link_projeto)
+              : (c.link_projeto || null);
+
+            return {
+              id:        c.id,
+              nome:      c.nome,
+              descricao: c.descricao || '',
+              ano:       c.estoque || c.ano || '',
+              bgLink,
+              isVimeo,
+            };
+          });
 
         if (hero.length > 0)     setHeroSlides(hero);
         if (portfolio.length > 0) setPortfolioItems(portfolio);
