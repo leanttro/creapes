@@ -602,14 +602,14 @@ export default function Painel() {
                 <table style={{width:'100%', borderCollapse:'collapse'}}>
                   <thead>
                     <tr style={{background: T.bg3}}>
-                      {['Ordem','Projeto','Subtítulo / Estilo','Ano','Ações'].map((h,i) => (
-                        <th key={h} style={{...S.th, textAlign: i===4?'right':'left'}}>{h}</th>
+                      {['Ordem','Projeto','Subtítulo / Estilo','Ano','Player Vimeo','Ações'].map((h,i) => (
+                        <th key={h} style={{...S.th, textAlign: i===5?'right':'left'}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {prodLoading && <LoadingRow cols={5}/>}
-                    {!prodLoading && produtos.length===0 && <EmptyRow cols={5} text="Nenhum vídeo cadastrado."/>}
+                    {prodLoading && <LoadingRow cols={6}/>}
+                    {!prodLoading && produtos.length===0 && <EmptyRow cols={6} text="Nenhum vídeo cadastrado."/>}
                     {produtos.map(prod => (
                       <tr key={prod.id}
                         onMouseEnter={e=>e.currentTarget.style.background=T.bg3}
@@ -622,6 +622,19 @@ export default function Painel() {
                         <td style={{...S.td, fontWeight:700}}>{prod.nome}</td>
                         <td style={{...S.td, color: T.muted, fontSize:13}}>{prod.descricao}</td>
                         <td style={{...S.td, color: T.muted, fontSize:13}}>{prod.estoque}</td>
+                        <td style={{...S.td, fontSize:12}}>
+                          {prod.whatsapp_projeto
+                            ? <a
+                                href={prod.whatsapp_projeto}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{color:T.accent, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4, fontWeight:600}}
+                              >
+                                <ExternalLink size={12}/> Ver Player
+                              </a>
+                            : <span style={{color:T.muted}}>—</span>
+                          }
+                        </td>
                         <td style={{...S.td, textAlign:'right'}}>
                           <IconBtn onClick={()=>openEditProd(prod)} color="#60a5fa"><Edit2 size={15}/></IconBtn>
                           <IconBtn onClick={()=>deleteProd(prod.id)} color={T.danger}><Trash2 size={15}/></IconBtn>
