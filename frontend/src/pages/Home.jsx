@@ -25,27 +25,21 @@ const SITE_FALLBACK = {
   linkedinUrl: 'https://linkedin.com/company/creapes',
 };
 
-// CLIENT_LOGOS removido — logos agora vêm do painel via getConfig()
-
 // ── Converte URL do Vimeo normal para player embed ────────────────────────────
 function buildVimeoEmbedUrl(url) {
   if (!url) return null;
   if (url.includes('player.vimeo.com')) return url;
   const clean = url.split('?')[0].replace(/\/$/, '');
   const parts = clean.split('/');
-  // vimeo.com/VIDEO_ID/HASH
   if (parts.length >= 5) return `https://player.vimeo.com/video/${parts[3]}?h=${parts[4]}`;
-  // vimeo.com/VIDEO_ID
   if (parts.length === 4) return `https://player.vimeo.com/video/${parts[3]}`;
   return null;
 }
 
 // ── Verifica se case pertence à categoria "hero" ──────────────────────────────
-// Igual ao original Jinja: 'hero' in c.slug|lower or 'hero' in c.nome|lower
 function isHeroCase(c) {
   const catNome = (c.categoria_nome || c.categoria?.nome || '').toLowerCase();
   const catSlug = (c.categoria_slug || c.categoria?.slug || '').toLowerCase();
-  // também aceita quando o campo categoria já vem como string direto
   const catStr  = (typeof c.categoria === 'string' ? c.categoria : '').toLowerCase();
   return catNome.includes('hero') || catSlug.includes('hero') || catStr.includes('hero');
 }
@@ -61,7 +55,6 @@ export default function Home() {
   useEffect(() => {
     getCases()
       .then((cases) => {
-        // Ordena pelo campo "preco" (igual ao original: produtos|sort(attribute='preco'))
         const sorted = [...cases].sort((a, b) => (a.preco ?? 0) - (b.preco ?? 0));
 
         const hero = sorted
@@ -71,7 +64,7 @@ export default function Home() {
             return {
               id:      c.id,
               nome:    c.nome,
-              ano:     c.estoque || c.ano || '',   // original usa p.estoque para o ano
+              ano:     c.estoque || c.ano || '',
               bgVideo,
               isVimeo: bgVideo?.includes('vimeo.com') || false,
               caseId:  c.id,
@@ -82,8 +75,6 @@ export default function Home() {
           .filter((c) => !isHeroCase(c))
           .map((c) => {
             const isVimeo = c.link_projeto?.includes('vimeo') || false;
-            // Mesma conversão usada na Hero: vimeo.com/ID/HASH -> player.vimeo.com/video/ID?h=HASH
-            // Necessário porque vimeo.com bloqueia embed direto (X-Frame-Options: sameorigin)
             const bgLink = isVimeo
               ? (buildVimeoEmbedUrl(c.link_projeto) || c.link_projeto)
               : (c.link_projeto || null);
@@ -98,12 +89,10 @@ export default function Home() {
             };
           });
 
-        if (hero.length > 0)     setHeroSlides(hero);
+        if (hero.length > 0)      setHeroSlides(hero);
         if (portfolio.length > 0) setPortfolioItems(portfolio);
       })
-      .catch(() => {
-        // Arrays vazios — componentes mostram fallback visual
-      });
+      .catch(() => {});
 
     getConfig()
       .then((config) => {
@@ -116,7 +105,6 @@ export default function Home() {
           vimeoUrl:    SITE_FALLBACK.vimeoUrl,
           linkedinUrl: SITE_FALLBACK.linkedinUrl,
         });
-        // Lê os logos dos clientes cadastrados no painel (campo clientes_logos)
         if (config.logos_clientes || config.clientes_logos) {
           const urls = (config.logos_clientes || config.clientes_logos)
             .split('\n')
@@ -149,6 +137,27 @@ export default function Home() {
 
     return () => observer.disconnect();
   }, [loaderDone]);
+
+  // ── PERFORMANCE: pausa animações cinematic quando a aba fica inativa ──────
+  useEffect(() => {
+    const elements = [
+      document.querySelector('.cinematic-overlay'),
+      document.querySelector('.cinematic-overlay::after'),
+    ];
+
+    const handleVisibility = () => {
+      const state = document.hidden ? 'paused' : 'running';
+      const overlay = document.querySelector('.cinematic-overlay');
+      if (overlay) {
+        overlay.style.animationPlayState = state;
+        // pausa também o pseudo-element via classe CSS
+        overlay.classList.toggle('anim-paused', document.hidden);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   const handleLoaderComplete = useCallback(() => {
     document.body.classList.remove('loading');
@@ -205,6 +214,13 @@ export default function Home() {
           animation: flicker 0.15s infinite;
           opacity: 0.4;
           mix-blend-mode: overlay;
+          /* PERFORMANCE: will-change avisa o browser pra isolar em camada */
+          will-change: opacity;
+        }
+        /* PERFORMANCE: pausa todas as animações do overlay quando .anim-paused */
+        .cinematic-overlay.anim-paused,
+        .cinematic-overlay.anim-paused::after {
+          animation-play-state: paused !important;
         }
         .cinematic-overlay::after {
           content: "";
@@ -213,6 +229,8 @@ export default function Home() {
           opacity: 0.3;
           animation: grain 8s steps(10) infinite;
           pointer-events: none;
+          /* PERFORMANCE: transform-only animation fica na GPU, não repinta o layout */
+          will-change: transform;
         }
         .cinematic-grade {
           position: fixed; top: 0; left: 0; width: 100%; height: 100%;
