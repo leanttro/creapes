@@ -217,25 +217,34 @@ export default function Evolve({
         evolveSticky.removeEventListener('mouseleave', onMouseLeaveSpotlight);
       }
       cleanupScatter.forEach((fn) => fn());
-      gsap.killTweensOf(evolveSticky?.querySelectorAll('.hover-move'));
+      if (evolveSticky) {
+        evolveSticky.querySelectorAll('.hover-move').forEach((el) => gsap.killTweensOf(el));
+      }
     };
   }, []);
 
   // ── Dispara animação da frase 0 quando o Loader termina ───────────────────
   useEffect(() => {
     if (!ready) return;
-    const firstPhrase = phraseRefs.current[0];
-    if (!firstPhrase) return;
 
-    // setTimeout garante que o browser já aplicou visibility:visible no pai
-    // antes de adicionar a classe active (rAF sozinho pode rodar antes do paint)
-    const t = setTimeout(() => {
-      firstPhrase.classList.remove('active');
-      void firstPhrase.offsetWidth;
-      firstPhrase.classList.add('active');
-    }, 50);
+    // Dois rAFs encadeados: o primeiro espera o visibility:visible ser pintado,
+    // o segundo garante que o browser já calculou o layout com o elemento visível.
+    // Isso é mais confiável que setTimeout porque segue o ciclo real do browser.
+    let id1, id2;
+    id1 = requestAnimationFrame(() => {
+      id2 = requestAnimationFrame(() => {
+        const firstPhrase = phraseRefs.current[0];
+        if (!firstPhrase) return;
+        firstPhrase.classList.remove('active');
+        void firstPhrase.offsetWidth;
+        firstPhrase.classList.add('active');
+      });
+    });
 
-    return () => clearTimeout(t);
+    return () => {
+      cancelAnimationFrame(id1);
+      cancelAnimationFrame(id2);
+    };
   }, [ready]);
 
   return (
