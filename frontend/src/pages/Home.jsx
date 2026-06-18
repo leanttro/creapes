@@ -163,7 +163,7 @@ export default function Home() {
 
       <Loader onComplete={handleLoaderComplete} />
 
-      <div style={{ visibility: loaderDone ? 'visible' : 'hidden' }}>
+      <div style={{ opacity: loaderDone ? 1 : 0, pointerEvents: loaderDone ? 'auto' : 'none', transition: 'opacity 0.3s' }}>
         <Navbar brandName={site.nome} brandLogo={site.logo} />
 
         <Hero slides={heroSlides} />
