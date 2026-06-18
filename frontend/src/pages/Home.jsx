@@ -168,7 +168,7 @@ export default function Home() {
 
         <Clientes logos={CLIENT_LOGOS} />
 
-        <Evolve />
+        <Evolve ready={loaderDone} />
 
         <Portfolio items={portfolioItems} />
 
