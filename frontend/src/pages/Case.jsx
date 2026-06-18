@@ -71,7 +71,12 @@ export default function Case() {
     setLoading(true);
     getCases()
       .then((cases) => {
-        const found = cases.find((c) => toSlug(c.nome) === slug);
+        // Pega todos que batem no slug, prioriza o que tiver mais dados preenchidos
+        const matches = cases.filter((c) => toSlug(c.nome) === slug);
+        const found = matches.sort((a, b) => {
+          const score = (c) => (c.descricao ? 2 : 0) + (c.link_projeto ? 2 : 0) + (c.resumo ? 1 : 0) + (c.imagem ? 1 : 0);
+          return score(b) - score(a);
+        })[0] || null;
         if (!found) { setLoading(false); return; }
 
         setProd({
