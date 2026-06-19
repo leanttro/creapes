@@ -375,6 +375,8 @@ export default function Case() {
       {/* ── DIVIDER ── */}
       <div className="divider" />
 
+
+
       {/* ── MARQUEE ── */}
       {nome && (
         <div className="marquee-section">
