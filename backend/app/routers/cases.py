@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.dependencies.auth import exigir_admin
 from app.models.orm import Case as CaseORM, Categoria as CategoriaORM
 from app.models.schemas import CaseInput, CaseOut, MensagemOut
 from app.services.cache import cache_get, cache_invalidate, cache_set
@@ -72,7 +73,9 @@ async def detalhe_case(case_id: int, db: AsyncSession = Depends(get_db)) -> Case
 # ── POST /cases ───────────────────────────────────────────────────────────────
 
 @router.post("", response_model=CaseOut, status_code=201)
-async def criar_case(dados: CaseInput, db: AsyncSession = Depends(get_db)) -> CaseOut:
+async def criar_case(
+    dados: CaseInput, db: AsyncSession = Depends(get_db), _: str = Depends(exigir_admin)
+) -> CaseOut:
     novo = CaseORM(**dados.model_dump())
     db.add(novo)
     await db.commit()
@@ -94,7 +97,10 @@ async def criar_case(dados: CaseInput, db: AsyncSession = Depends(get_db)) -> Ca
 
 @router.put("/{case_id}", response_model=CaseOut)
 async def atualizar_case(
-    case_id: int, dados: CaseInput, db: AsyncSession = Depends(get_db)
+    case_id: int,
+    dados: CaseInput,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(exigir_admin),
 ) -> CaseOut:
     result = await db.execute(select(CaseORM).where(CaseORM.id == case_id))
     row = result.scalar_one_or_none()
@@ -123,7 +129,7 @@ async def atualizar_case(
 
 @router.delete("/{case_id}", response_model=MensagemOut)
 async def deletar_case(
-    case_id: int, db: AsyncSession = Depends(get_db)
+    case_id: int, db: AsyncSession = Depends(get_db), _: str = Depends(exigir_admin)
 ) -> MensagemOut:
     result = await db.execute(select(CaseORM).where(CaseORM.id == case_id))
     row = result.scalar_one_or_none()
