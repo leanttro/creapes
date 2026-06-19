@@ -3,7 +3,7 @@ import CreapesParticles3D from './CreapesParticles3D';
 
 // Props:
 // nome: string — nome da empresa (ex: "Creapes")
-// whatsapp: string — número para link wa.me (ex: "5511985816262")
+// whatsapp: string — número para link wa.me (ex: "5511999999999")
 // instagramUrl: string — URL do Instagram
 // vimeoUrl: string
 // linkedinUrl: string
@@ -208,7 +208,7 @@ export default function Footer({
       </div>
 
       <div className="footer-signature fade-in">
-        <CreapesParticles3D texto={nome.toUpperCase()} height={340} />
+        <CreapesParticles3D texto="CREAPES" height={340} />
       </div>
 
       <div className="footer-bottom fade-in">
