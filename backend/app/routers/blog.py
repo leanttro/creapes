@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.dependencies.auth import exigir_admin
 from app.models.orm import BlogPost as BlogPostORM
 from app.models.schemas import BlogPostInput, BlogPostOut, MensagemOut
 from app.services.cache import cache_get, cache_invalidate, cache_set
@@ -64,7 +65,9 @@ async def detalhe_post(slug: str, db: AsyncSession = Depends(get_db)) -> BlogPos
 
 @router.post("", response_model=BlogPostOut, status_code=201)
 async def criar_post(
-    dados: BlogPostInput, db: AsyncSession = Depends(get_db)
+    dados: BlogPostInput,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(exigir_admin),
 ) -> BlogPostOut:
     # Slug deve ser único
     existente = await db.execute(
@@ -89,7 +92,10 @@ async def criar_post(
 
 @router.put("/{post_id}", response_model=BlogPostOut)
 async def atualizar_post(
-    post_id: int, dados: BlogPostInput, db: AsyncSession = Depends(get_db)
+    post_id: int,
+    dados: BlogPostInput,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(exigir_admin),
 ) -> BlogPostOut:
     result = await db.execute(select(BlogPostORM).where(BlogPostORM.id == post_id))
     row = result.scalar_one_or_none()
@@ -123,7 +129,7 @@ async def atualizar_post(
 
 @router.delete("/{post_id}", response_model=MensagemOut)
 async def deletar_post(
-    post_id: int, db: AsyncSession = Depends(get_db)
+    post_id: int, db: AsyncSession = Depends(get_db), _: str = Depends(exigir_admin)
 ) -> MensagemOut:
     result = await db.execute(select(BlogPostORM).where(BlogPostORM.id == post_id))
     row = result.scalar_one_or_none()
