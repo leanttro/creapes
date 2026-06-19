@@ -13,7 +13,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from app.dependencies.auth import exigir_admin
+from app.routers.auth import exigir_admin
 from app.models.schemas import UploadOut
 
 logger = logging.getLogger(__name__)
