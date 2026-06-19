@@ -317,10 +317,7 @@ export default function Case() {
           </div>
         </div>
 
-        <div className="hero-scroll-hint">
-          <span>Scroll</span>
-          <div className="scroll-line" />
-        </div>
+
       </section>
 
       {/* ── COUNTER BAR ── */}
