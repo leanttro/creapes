@@ -16,7 +16,7 @@ import { useState } from 'react';
  * Resto idêntico: bgVideo já chega convertido para player.vimeo.com (Home.jsx),
  * allow="autoplay; fullscreen; picture-in-picture", play-link com window.location.
  */
-export default function Hero({ slides = [] }) {
+export default function Hero({ slides = [], ready = true }) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const goToSlide = (index) => {
@@ -66,8 +66,9 @@ export default function Hero({ slides = [] }) {
             key={slide.id}
             className={`slide${isActive ? ' active' : ''}`}
           >
-            {/* ── Background: slide 0 pré-carrega durante o loader; demais lazy ── */}
-            {(isActive || index === 0) && slide.isVimeo && (
+            {/* ── Background: só carrega depois que o loader terminar (evita disputar
+                 banda com o loader) e só o slide ativo (ou o 0 assim que ready) ── */}
+            {ready && (isActive || index === 0) && slide.isVimeo && (
               <div
                 style={{
                   position: 'absolute', top: 0, left: 0,
@@ -97,7 +98,7 @@ export default function Hero({ slides = [] }) {
               </div>
             )}
 
-            {(isActive || index === 0) && !slide.isVimeo && slide.bgVideo && (
+            {ready && (isActive || index === 0) && !slide.isVimeo && slide.bgVideo && (
               <video
                 src={slide.bgVideo}
                 autoPlay
