@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies.auth import exigir_admin
+from app.routers.auth import exigir_admin
 from app.models.orm import Config
 from app.models.schemas import ConfigOut, ConfigSchema
 
