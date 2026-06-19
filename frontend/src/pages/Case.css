@@ -40,6 +40,7 @@ body.cursor-video .cursor-ring  { width: 68px; height: 68px; border-color: var(-
   position: fixed; top: 0; left: 0; width: 100%; z-index: 1000;
   display: flex; align-items: center; justify-content: space-between;
   padding: 1.4rem 4rem;
+  background: #000;
 }
 .nav-back {
   display: flex; align-items: center; gap: .8rem;
