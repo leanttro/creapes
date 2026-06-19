@@ -157,7 +157,7 @@ export default function CreapesParticles3D({ texto = 'CREAPES', height = 260 }) 
           const index = (x + y * w) * 4;
           const r = imgData[index];
 
-          if (r > 50) {
+          if (r > 160) {
             const pX = (x - w / 2) * scaleMultiplier;
             const pY = -(y - h / 2) * scaleMultiplier;
             const pZ = 0;
