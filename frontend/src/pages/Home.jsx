@@ -36,127 +36,199 @@ function BlogCarousel() {
   const scrollBy = (dir) => {
     const el = trackRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir * (el.clientWidth * 0.8), behavior: 'smooth' });
+    el.scrollBy({ left: dir * (el.clientWidth * 0.85), behavior: 'smooth' });
   };
 
   if (posts.length === 0) return null;
 
   return (
     <section className="blog-carousel fade-in">
+      <div className="blog-carousel__deco" aria-hidden="true">BLOG</div>
+
       <div className="blog-carousel__header">
         <div>
           <p className="blog-carousel__eyebrow">
             <span className="blog-carousel__eyebrow-line" />
             Blog
           </p>
-          <h2 className="blog-carousel__title">Bastidores &amp; ideias</h2>
+          <h2 className="blog-carousel__title">
+            Bastidores<br /><em>&amp; ideias.</em>
+          </h2>
         </div>
         <div className="blog-carousel__actions">
-          <button type="button" aria-label="Anterior" className="blog-carousel__nav" onClick={() => scrollBy(-1)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          <Link to="/blog" className="blog-carousel__viewall">
+            Ver tudo
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </button>
-          <button type="button" aria-label="Próximo" className="blog-carousel__nav" onClick={() => scrollBy(1)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <Link to="/blog" className="blog-carousel__viewall">Ver tudo</Link>
+          </Link>
+          <div className="blog-carousel__navgroup">
+            <button type="button" aria-label="Anterior" className="blog-carousel__nav" onClick={() => scrollBy(-1)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button type="button" aria-label="Próximo" className="blog-carousel__nav blog-carousel__nav--accent" onClick={() => scrollBy(1)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="blog-carousel__track" ref={(el) => { trackRef.current = el; }}>
-        {posts.map((post) => (
+        {posts.map((post, i) => (
           <Link to={`/blog/${post.slug}`} key={post.id} className="blog-carousel__card">
+            <span className="blog-carousel__index">{String(i + 1).padStart(2, '0')}</span>
             <div className="blog-carousel__thumb">
               {post.imagem_capa ? (
                 <img src={post.imagem_capa} alt={post.titulo} loading="lazy" />
               ) : (
                 <div className="blog-carousel__thumb-placeholder" />
               )}
+              <div className="blog-carousel__thumb-glow" />
             </div>
-            <time className="blog-carousel__date">{formatBlogDate(post.data_publicacao)}</time>
-            <h3 className="blog-carousel__card-title">{post.titulo}</h3>
-            <p className="blog-carousel__card-resumo">{post.resumo}</p>
+            <div className="blog-carousel__card-body">
+              <time className="blog-carousel__date">{formatBlogDate(post.data_publicacao)}</time>
+              <h3 className="blog-carousel__card-title">{post.titulo}</h3>
+              <p className="blog-carousel__card-resumo">{post.resumo}</p>
+              <span className="blog-carousel__card-cta">
+                Ler artigo
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </div>
           </Link>
         ))}
       </div>
 
       <style>{`
         .blog-carousel {
-          padding: 6rem 4rem;
-          background: var(--bg, #0b0d0f);
+          position: relative;
+          padding: 7rem 4rem 8rem;
+          background: radial-gradient(ellipse at top left, rgba(208,255,0,0.04) 0%, transparent 55%), #0b0d0f;
+          overflow: hidden;
+        }
+        .blog-carousel__deco {
+          position: absolute; top: 50%; right: -1rem; transform: translateY(-50%);
+          font-family: 'Space Grotesk', sans-serif; font-size: clamp(8rem, 18vw, 18rem);
+          font-weight: 700; letter-spacing: -0.06em; color: transparent;
+          -webkit-text-stroke: 1px rgba(240,240,240,.04);
+          pointer-events: none; user-select: none; white-space: nowrap; z-index: 0;
         }
         .blog-carousel__header {
+          position: relative; z-index: 1;
           display: flex; align-items: flex-end; justify-content: space-between;
-          margin-bottom: 2.5rem; gap: 1.5rem; flex-wrap: wrap;
+          margin-bottom: 3.5rem; gap: 1.5rem; flex-wrap: wrap;
         }
         .blog-carousel__eyebrow {
           display: flex; align-items: center; gap: 1rem;
-          font-size: .7rem; text-transform: uppercase; letter-spacing: .2em;
-          color: #d0ff00; margin-bottom: 1rem;
+          font-size: .72rem; text-transform: uppercase; letter-spacing: .22em;
+          color: #d0ff00; margin-bottom: 1.2rem; font-weight: 700;
         }
-        .blog-carousel__eyebrow-line { display: block; width: 32px; height: 1px; background: #d0ff00; }
+        .blog-carousel__eyebrow-line {
+          display: block; width: 36px; height: 2px; background: #d0ff00;
+          box-shadow: 0 0 12px rgba(208,255,0,.7);
+        }
         .blog-carousel__title {
           font-family: 'Space Grotesk', sans-serif;
-          font-size: clamp(1.8rem, 3vw, 2.8rem); font-weight: 700;
-          letter-spacing: -0.03em; color: #f0f0f0;
+          font-size: clamp(2.4rem, 4.5vw, 4rem); font-weight: 700;
+          letter-spacing: -0.04em; line-height: .98; color: #ffffff;
         }
-        .blog-carousel__actions { display: flex; align-items: center; gap: .75rem; }
+        .blog-carousel__title em { font-style: normal; color: #d0ff00; }
+        .blog-carousel__actions { display: flex; align-items: center; gap: 1.5rem; }
+        .blog-carousel__viewall {
+          display: inline-flex; align-items: center; gap: .6rem;
+          font-size: .78rem; text-transform: uppercase; letter-spacing: .15em;
+          color: #ffffff; font-weight: 700;
+          font-family: 'Space Grotesk', sans-serif; transition: color .3s, gap .3s;
+          text-decoration: none; white-space: nowrap; padding-bottom: .3rem;
+          border-bottom: 1px solid rgba(240,240,240,.25);
+        }
+        .blog-carousel__viewall svg { width: 16px; height: 16px; }
+        .blog-carousel__viewall:hover { color: #d0ff00; gap: .9rem; border-color: #d0ff00; }
+        .blog-carousel__navgroup { display: flex; align-items: center; gap: .6rem; }
         .blog-carousel__nav {
-          width: 42px; height: 42px; border-radius: 50%;
-          border: 1px solid rgba(240,240,240,0.15); background: transparent;
+          width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+          border: 1px solid rgba(240,240,240,0.18); background: transparent;
           color: #f0f0f0; display: flex; align-items: center; justify-content: center;
-          cursor: pointer; transition: border-color .3s, color .3s;
+          cursor: pointer; transition: border-color .3s, color .3s, background .3s, transform .3s;
         }
         .blog-carousel__nav svg { width: 18px; height: 18px; }
-        .blog-carousel__nav:hover { border-color: #d0ff00; color: #d0ff00; }
-        .blog-carousel__viewall {
-          font-size: .72rem; text-transform: uppercase; letter-spacing: .15em;
-          color: rgba(240,240,240,0.6); font-weight: 700; margin-left: .5rem;
-          font-family: 'Space Grotesk', sans-serif; transition: color .3s;
-          text-decoration: none; white-space: nowrap;
-        }
-        .blog-carousel__viewall:hover { color: #d0ff00; }
+        .blog-carousel__nav:hover { border-color: #d0ff00; color: #d0ff00; transform: scale(1.06); }
+        .blog-carousel__nav--accent { background: #d0ff00; border-color: #d0ff00; color: #000; }
+        .blog-carousel__nav--accent:hover { background: #e4ff4d; color: #000; box-shadow: 0 0 24px rgba(208,255,0,.45); }
 
         .blog-carousel__track {
-          display: flex; gap: 1.5rem; overflow-x: auto; scroll-snap-type: x mandatory;
-          padding-bottom: .5rem; scrollbar-width: none;
+          position: relative; z-index: 1;
+          display: flex; gap: 2rem; overflow-x: auto; scroll-snap-type: x mandatory;
+          padding-bottom: 1rem; scrollbar-width: none;
         }
         .blog-carousel__track::-webkit-scrollbar { display: none; }
 
         .blog-carousel__card {
-          flex: 0 0 320px; scroll-snap-align: start;
-          display: flex; flex-direction: column; gap: .75rem;
+          flex: 0 0 380px; scroll-snap-align: start;
+          display: flex; flex-direction: column;
           text-decoration: none; color: inherit;
+          background: #14171a; border: 1px solid rgba(240,240,240,0.08);
+          border-radius: 8px; overflow: hidden; position: relative;
+          transition: border-color .4s cubic-bezier(0.16,1,0.3,1), transform .4s cubic-bezier(0.16,1,0.3,1), box-shadow .4s;
+        }
+        .blog-carousel__card:hover {
+          border-color: rgba(208,255,0,.4); transform: translateY(-6px);
+          box-shadow: 0 24px 60px rgba(0,0,0,.45);
+        }
+        .blog-carousel__index {
+          position: absolute; top: 1.2rem; left: 1.2rem; z-index: 2;
+          font-family: 'Space Grotesk', sans-serif; font-size: .72rem; font-weight: 700;
+          color: #000; background: #d0ff00; padding: .3rem .7rem; border-radius: 100px;
+          letter-spacing: .05em;
         }
         .blog-carousel__thumb {
-          height: 200px; border-radius: 4px; overflow: hidden;
-          background: linear-gradient(135deg, #1a1e22, #111416);
+          position: relative; height: 240px; overflow: hidden;
+          display: flex; align-items: center; justify-content: center;
+          background: radial-gradient(circle at center, #1c2024 0%, #0e1012 100%);
         }
         .blog-carousel__thumb img {
-          width: 100%; height: 100%; object-fit: cover; transition: transform .8s cubic-bezier(0.16,1,0.3,1);
+          width: 100%; height: 100%; object-fit: contain; padding: 1.5rem;
+          transition: transform .8s cubic-bezier(0.16,1,0.3,1);
         }
-        .blog-carousel__card:hover .blog-carousel__thumb img { transform: scale(1.05); }
-        .blog-carousel__thumb-placeholder { width: 100%; height: 100%; }
+        .blog-carousel__card:hover .blog-carousel__thumb img { transform: scale(1.08); }
+        .blog-carousel__thumb-placeholder { width: 100%; height: 100%; background: linear-gradient(135deg, #1a1e22, #111416); }
+        .blog-carousel__thumb-glow {
+          position: absolute; inset: 0; pointer-events: none;
+          background: linear-gradient(to top, rgba(0,0,0,.55) 0%, transparent 45%);
+        }
+        .blog-carousel__card-body { padding: 1.8rem 1.8rem 2.2rem; display: flex; flex-direction: column; gap: .7rem; }
         .blog-carousel__date {
-          font-size: .68rem; text-transform: uppercase; letter-spacing: .15em;
-          color: rgba(240,240,240,0.38);
+          font-size: .7rem; text-transform: uppercase; letter-spacing: .15em;
+          color: #d0ff00; font-weight: 700;
         }
         .blog-carousel__card-title {
-          font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; font-weight: 700;
-          line-height: 1.25; letter-spacing: -0.01em; color: #f0f0f0; transition: color .3s;
+          font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; font-weight: 700;
+          line-height: 1.25; letter-spacing: -0.02em; color: #ffffff; transition: color .3s;
         }
         .blog-carousel__card:hover .blog-carousel__card-title { color: #d0ff00; }
         .blog-carousel__card-resumo {
-          font-size: .85rem; line-height: 1.6; color: rgba(240,240,240,0.5);
+          font-size: .9rem; line-height: 1.65; color: rgba(240,240,240,0.55);
           display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
         }
+        .blog-carousel__card-cta {
+          display: inline-flex; align-items: center; gap: .5rem;
+          font-size: .74rem; text-transform: uppercase; letter-spacing: .15em;
+          color: #ffffff; font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+          margin-top: .6rem; transition: gap .3s, color .3s;
+        }
+        .blog-carousel__card-cta svg { width: 14px; height: 14px; }
+        .blog-carousel__card:hover .blog-carousel__card-cta { gap: .9rem; color: #d0ff00; }
 
         @media (max-width: 768px) {
-          .blog-carousel { padding: 3.5rem 1.8rem; }
-          .blog-carousel__card { flex: 0 0 78vw; }
+          .blog-carousel { padding: 4rem 1.8rem 4.5rem; }
+          .blog-carousel__deco { display: none; }
+          .blog-carousel__card { flex: 0 0 82vw; }
+          .blog-carousel__thumb { height: 200px; }
         }
       `}</style>
     </section>
