@@ -469,12 +469,6 @@ export default function Home() {
           pointer-events: none; z-index: 9992;
           background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.95) 100%);
         }
-        @media (max-width: 768px) {
-          html, body {
-            overflow-x: hidden;
-            max-width: 100vw;
-          }
-        }
         @keyframes flicker {
           0%, 100% { opacity: 0.4; }
           50%       { opacity: 0.35; }
