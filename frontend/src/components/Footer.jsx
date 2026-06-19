@@ -3,7 +3,7 @@ import CreapesParticles3D from './CreapesParticles3D';
 
 // Props:
 // nome: string — nome da empresa (ex: "Creapes")
-// whatsapp: string — número para link wa.me (ex: "5511999999999")
+// whatsapp: string — número para link wa.me (ex: "5511985816262")
 // instagramUrl: string — URL do Instagram
 // vimeoUrl: string
 // linkedinUrl: string
@@ -65,7 +65,7 @@ export default function Footer({
       <div className="footer-blocks fade-in">
 
         {/* ── Bloco Formulário ── */}
-        <div className="footer-block">
+        <div className="footer-block footer-block-form">
           <div className="cf-header">
             <h2>Start a Project</h2>
             {!submitted && (
@@ -189,7 +189,7 @@ export default function Footer({
         </div>
 
         {/* ── Bloco Join the Crew ── */}
-        <div className="footer-block">
+        <div className="footer-block footer-block-hire">
           <h2>Join the Crew</h2>
           <p className="work-with-us">
             Buscamos mentes inquietas. Editores de vídeo, motion designers e coloristas
@@ -208,7 +208,7 @@ export default function Footer({
       </div>
 
       <div className="footer-signature fade-in">
-        <CreapesParticles3D texto={nome.toUpperCase()} height={220} />
+        <CreapesParticles3D texto={nome.toUpperCase()} height={340} />
       </div>
 
       <div className="footer-bottom fade-in">
@@ -254,23 +254,40 @@ export default function Footer({
         }
         .footer-blocks {
           display: flex;
-          gap: 6rem;
+          flex-direction: column;
+          gap: 5rem;
           margin-bottom: 6rem;
-          flex-wrap: wrap;
         }
         .footer-block {
-          flex: 1;
-          min-width: 300px;
+          width: 100%;
         }
         .footer-block h2 {
           font-size: 2rem;
+        }
+        .footer-block-form {
+          max-width: 880px;
+        }
+        .footer-block-form h2 {
+          font-size: 2.8rem;
+        }
+        .footer-block-hire {
+          max-width: 640px;
+          padding-top: 3rem;
+          border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .footer-block-hire h2 {
+          font-size: 1.7rem;
+          color: rgba(240,240,240,0.6);
+        }
+        .footer-block-hire .work-with-us {
+          font-size: 1rem;
         }
         .cf-header {
           display: flex;
           align-items: baseline;
           justify-content: space-between;
           gap: 1.5rem;
-          margin-bottom: 2.6rem;
+          margin-bottom: 3rem;
           flex-wrap: wrap;
         }
         .cf-progress {
@@ -328,12 +345,12 @@ export default function Footer({
         }
         .cf-number {
           font-family: 'Space Grotesk', sans-serif;
-          font-size: 0.72rem;
+          font-size: 0.85rem;
           font-weight: 700;
           color: rgba(240,240,240,0.3);
           letter-spacing: 0.12em;
-          padding-top: 0.25rem;
-          min-width: 26px;
+          padding-top: 0.3rem;
+          min-width: 32px;
           transition: color 0.3s, text-shadow 0.3s;
         }
         .cf-field.is-active .cf-number,
@@ -345,10 +362,10 @@ export default function Footer({
           flex: 1;
           display: flex;
           flex-direction: column;
-          gap: 0.35rem;
+          gap: 0.45rem;
         }
         .cf-label {
-          font-size: 0.64rem;
+          font-size: 0.74rem;
           text-transform: uppercase;
           letter-spacing: 0.2em;
           font-weight: 600;
@@ -363,9 +380,9 @@ export default function Footer({
           outline: none;
           color: #ffffff;
           font-family: 'Inter', sans-serif;
-          font-size: 1.05rem;
+          font-size: 1.4rem;
           font-weight: 500;
-          padding: 0.2rem 0;
+          padding: 0.3rem 0;
           width: 100%;
           caret-color: var(--accent);
         }
@@ -383,31 +400,34 @@ export default function Footer({
           margin-right: 0;
           border-right: 1px solid rgba(255,255,255,0.08);
         }
+        .cf-field {
+          padding: 2rem 1rem;
+        }
         .cf-submit-wrap {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding-top: 2.2rem;
+          padding-top: 2.6rem;
           flex-wrap: wrap;
           gap: 1rem;
         }
         .cf-disclaimer {
-          font-size: 0.72rem;
+          font-size: 0.78rem;
           color: rgba(240,240,240,0.3);
           letter-spacing: 0.04em;
-          max-width: 220px;
+          max-width: 260px;
           line-height: 1.5;
         }
         .cf-submit-btn {
           display: inline-flex;
           align-items: center;
-          gap: 1.2rem;
+          gap: 1.4rem;
           background: none;
           border: none;
           cursor: pointer;
           padding: 0;
           font-family: 'Space Grotesk', sans-serif;
-          font-size: 1rem;
+          font-size: 1.15rem;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -416,8 +436,8 @@ export default function Footer({
         }
         .cf-submit-btn:hover { color: var(--accent); }
         .cf-submit-circle {
-          width: 52px;
-          height: 52px;
+          width: 58px;
+          height: 58px;
           border-radius: 50%;
           border: 1px solid rgba(255,255,255,0.2);
           display: flex;
@@ -535,10 +555,12 @@ export default function Footer({
 
         @media (max-width: 900px) {
           footer { padding: 5rem 2rem 2rem; }
-          .footer-blocks { flex-direction: column; gap: 3rem; }
+          .footer-blocks { gap: 3.5rem; }
+          .footer-block-form h2 { font-size: 2.1rem; }
           .cf-header { margin-bottom: 2rem; }
           .cf-row { flex-direction: column; }
           .cf-row .cf-field:first-child { border-right: none; }
+          .cf-input { font-size: 1.15rem; }
           .footer-bottom { flex-direction: column; gap: 1.5rem; }
         }
       `}</style>
