@@ -17,13 +17,19 @@ function slugFromPath() {
   return parts[parts.length - 1] || '';
 }
 
+// Mesmo logo usado na Home (fallback caso /api/config não responda)
+const SITE_LOGO_FALLBACK = 'https://res.cloudinary.com/dhu1cqvrb/image/upload/v1781788827/creapeslogo_jajjgt.png';
+
 export default function Case() {
   const [caseData, setCaseData]   = useState(null);
   const [loading,  setLoading]    = useState(true);
   const [error,    setError]      = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [siteLogo, setSiteLogo]   = useState(SITE_LOGO_FALLBACK);
   const cursorBallRef = useRef(null);
   const cursorRingRef = useRef(null);
+  const heroRef = useRef(null);
+  const [heroInView, setHeroInView] = useState(false);
 
   // ── Cursor customizado ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -126,6 +132,36 @@ export default function Case() {
     fetchCase();
   }, []);
 
+  // ── Logo do site (mesmo da Home) ────────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/config')
+      .then(res => (res.ok ? res.json() : null))
+      .then(config => {
+        const logo = config?.logo_url || config?.logo;
+        if (logo) setSiteLogo(logo);
+      })
+      .catch(() => {});
+  }, []);
+
+  // ── Detecta quando o hero entra na viewport, pra só then carregar o vídeo
+  //    de fundo nesse momento (evita baixar o player antes da hora) ──────────
+  useEffect(() => {
+    if (!caseData) return;
+    const el = heroRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHeroInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [caseData]);
+
   // ── Próximo case ────────────────────────────────────────────────────────────
   const [nextCase, setNextCase] = useState(null);
   useEffect(() => {
@@ -192,6 +228,23 @@ export default function Case() {
     if (m) embedUrl = `https://player.vimeo.com/video/${m[1]}${hash && hash !== m[1] ? '?h=' + hash : ''}?autoplay=1&title=0&byline=0&portrait=0`;
   }
 
+  // ── Vídeo de fundo do hero, igual ao da Home: mesma base do player, mas com
+  //    parâmetros de "background" (mudo, em loop, sem controles) ─────────────
+  const isVimeoVideo = Boolean(link_projeto && link_projeto.includes('vimeo.com'));
+  let playerBaseUrl = '';
+  if (isVimeoVideo) {
+    if (link_projeto.includes('player.vimeo')) {
+      playerBaseUrl = link_projeto.split('?')[0];
+    } else {
+      const m = link_projeto.match(/vimeo\.com\/(\d+)/);
+      const hash = link_projeto.split('/').pop();
+      if (m) playerBaseUrl = `https://player.vimeo.com/video/${m[1]}${hash && hash !== m[1] ? '?h=' + hash : ''}`;
+    }
+  }
+  const bgEmbedUrl = playerBaseUrl
+    ? `${playerBaseUrl}${playerBaseUrl.includes('?') ? '&' : '?'}background=1&autoplay=1&loop=1&muted=1&autopause=0`
+    : '';
+
   return (
     <>
       {cursorEl}
@@ -202,17 +255,40 @@ export default function Case() {
           <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           Voltar
         </a>
-        <a href="/" className="nav-brand">Creapes</a>
+        <a href="/" className="nav-brand">
+          <img src={siteLogo} alt="Creapes" />
+        </a>
         <a href="/#contato" className="nav-cta">Fale conosco</a>
       </nav>
 
       {/* ── HERO ── */}
-      <section className="case-hero">
+      <section className="case-hero" ref={heroRef}>
         <div className="hero-media">
           {imagem
             ? <img src={imagem} alt={nome} />
             : <div style={{ background: '#0a0a0a', width: '100%', height: '100%' }} />
           }
+
+          {heroInView && isVimeoVideo && bgEmbedUrl && (
+            <iframe
+              title={`hero-bg-${nome}`}
+              src={bgEmbedUrl}
+              style={{ position: 'absolute', top: 0, left: 0 }}
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+            />
+          )}
+
+          {heroInView && !isVimeoVideo && link_projeto && (
+            <video
+              src={link_projeto}
+              autoPlay
+              loop
+              muted
+              playsInline
+              style={{ position: 'absolute', top: 0, left: 0 }}
+            />
+          )}
         </div>
         <div className="hero-overlay" />
         <div className="hero-grain" />
