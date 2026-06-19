@@ -467,7 +467,7 @@ export default function Home() {
         .cinematic-vignette {
           position: fixed; top: 0; left: 0; width: 100%; height: 100%;
           pointer-events: none; z-index: 9992;
-          background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.95) 100%);
+          background: radial-gradient(circle at center, transparent 55%, rgba(0,0,0,0.35) 100%);
         }
         @keyframes flicker {
           0%, 100% { opacity: 0.4; }
