@@ -67,8 +67,9 @@ export default function Hero({ slides = [], ready = true }) {
             className={`slide${isActive ? ' active' : ''}`}
           >
             {/* ── Background: só carrega depois que o loader terminar (evita disputar
-                 banda com o loader) e só o slide ativo (ou o 0 assim que ready) ── */}
-            {ready && (isActive || index === 0) && slide.isVimeo && (
+                 banda com ele), mas todos os slides de uma vez assim que a seção abre,
+                 pra não ter delay ao passar o mouse em cima de outro título ── */}
+            {ready && slide.isVimeo && (
               <div
                 style={{
                   position: 'absolute', top: 0, left: 0,
@@ -98,7 +99,7 @@ export default function Hero({ slides = [], ready = true }) {
               </div>
             )}
 
-            {ready && (isActive || index === 0) && !slide.isVimeo && slide.bgVideo && (
+            {ready && !slide.isVimeo && slide.bgVideo && (
               <video
                 src={slide.bgVideo}
                 autoPlay
