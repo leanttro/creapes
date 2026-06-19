@@ -3,10 +3,15 @@
 // Valores de exemplo fixos; conectar ao backend depois via lib/api.js
 
 export default function Clientes({ logos = [] }) {
-  if (!logos || logos.length === 0) return null;
+  // Ignora URLs do Instagram (não retornam imagem direta)
+  const filteredLogos = (logos || []).filter(
+    (url) => !url.includes('instagram.com')
+  );
+
+  if (filteredLogos.length === 0) return null;
 
   // Duplica os logos para criar o efeito de marquee infinito (50% + 50%)
-  const doubled = [...logos, ...logos, ...logos, ...logos];
+  const doubled = [...filteredLogos, ...filteredLogos, ...filteredLogos, ...filteredLogos];
 
   return (
     <section className="clients-section fade-in">
