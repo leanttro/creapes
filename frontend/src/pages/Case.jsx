@@ -375,28 +375,6 @@ export default function Case() {
       {/* ── DIVIDER ── */}
       <div className="divider" />
 
-      {/* ── FULL VIDEO ── */}
-      {hasVideo && (
-        <section className="full-video-section">
-          <div
-            className="full-video-wrapper"
-            onClick={() => setModalOpen(true)}
-            onMouseEnter={() => document.body.classList.add('cursor-video')}
-            onMouseLeave={() => document.body.classList.remove('cursor-video')}
-          >
-            {imagem
-              ? <img src={imagem} alt={nome} />
-              : <div style={{ background: '#111', width: '100%', height: '100%' }} />
-            }
-            <div className="full-video-overlay">
-              <button className="full-video-play" aria-label="Play">
-                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ── MARQUEE ── */}
       {nome && (
         <div className="marquee-section">
