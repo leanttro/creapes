@@ -20,7 +20,8 @@ from slowapi.util import get_remote_address
 
 load_dotenv()
 
-from app.routers import blog, cases, categorias, contato, leads, servicos, upload, agenda, config
+from app.routers import auth, blog, cases, categorias, contato, leads, servicos, upload, agenda, config
+from app.services.seed_admin import seed_admin_from_env
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +39,7 @@ async def lifespan(app: FastAPI):
     uploads_dir = Path(__file__).parent / "uploads"
     uploads_dir.mkdir(parents=True, exist_ok=True)
     logger.info("✅  Diretório de uploads verificado.")
+    await seed_admin_from_env()
     yield
     logger.info("🛑  Creapes Backend encerrando.")
 
@@ -70,6 +72,7 @@ logger.info("CORS permitido para: %s", allowed_origins)
 
 API_PREFIX = "/api"
 
+app.include_router(auth.router,       prefix=API_PREFIX)
 app.include_router(cases.router,      prefix=API_PREFIX)
 app.include_router(categorias.router, prefix=API_PREFIX)
 app.include_router(servicos.router,   prefix=API_PREFIX)
