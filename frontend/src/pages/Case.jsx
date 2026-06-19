@@ -1,462 +1,465 @@
-import { useEffect, useRef, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { getCases, getConfig } from '../lib/api';
-import './Case.css';
+import { useState, useEffect } from 'react';
 
-gsap.registerPlugin(ScrollTrigger);
+// ── Design tokens (espelha o Painel) ──────────────────────────────────────────
+const T = {
+  bg:       '#0f1923',
+  bg2:      '#111d28',
+  bg3:      '#162130',
+  border:   '#1e3040',
+  text:     '#f5f5f7',
+  muted:    '#8a9bb0',
+  accent:   '#d0ff00',
+  accentDk: '#a8cc00',
+  danger:   '#ff4d4d',
+  fontHead: "'Space Grotesk', sans-serif",
+  fontBody: "'Inter', -apple-system, sans-serif",
+};
 
-function toSlug(nome) {
-  return (nome || '')
+// ── Utilitários ───────────────────────────────────────────────────────────────
+
+/** Gera slug a partir de uma string qualquer */
+function toSlug(str = '') {
+  return str
     .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
 }
 
-function buildVimeoEmbedUrl(url) {
-  if (!url) return null;
-  if (url.includes('player.vimeo.com')) return url;
-  const clean = url.split('?')[0].replace(/\/$/, '');
-  const parts = clean.split('/');
-  if (parts.length >= 5) return `https://player.vimeo.com/video/${parts[3]}?h=${parts[4]}`;
-  if (parts.length === 4) return `https://player.vimeo.com/video/${parts[3]}`;
-  return null;
+/** Lê o slug do pathname: /cases/:slug → slug */
+function slugFromPath() {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  // suporta /cases/meu-case  ou  /case/meu-case  ou último segmento
+  const idx = parts.findIndex(p => p === 'cases' || p === 'case');
+  if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
+  return parts[parts.length - 1] || '';
 }
 
-function buildVimeoPlayerUrl(url) {
-  if (!url) return null;
-  let final = buildVimeoEmbedUrl(url) || url;
-  if (!final.includes('autoplay')) final += (final.includes('?') ? '&' : '?') + 'autoplay=1';
-  return final;
+// ── Componentes auxiliares ────────────────────────────────────────────────────
+
+function Spinner() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '80px 0', color: T.muted, fontFamily: T.fontBody, fontSize: 15 }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" style={{ animation: 'spin 0.9s linear infinite', flexShrink: 0 }}>
+        <circle cx="12" cy="12" r="10" fill="none" stroke={T.accent} strokeWidth="3" strokeDasharray="40 20" />
+      </svg>
+      Carregando case…
+    </div>
+  );
 }
+
+function NotFound() {
+  return (
+    <div style={{ textAlign: 'center', padding: '100px 24px', color: T.muted, fontFamily: T.fontBody }}>
+      <div style={{ fontSize: 64, marginBottom: 16, opacity: 0.3 }}>⬡</div>
+      <p style={{ fontFamily: T.fontHead, fontSize: 22, fontWeight: 700, color: T.text, marginBottom: 8 }}>Case não encontrado</p>
+      <p style={{ fontSize: 14, marginBottom: 32 }}>O projeto que você buscou não existe ou foi removido.</p>
+      <a href="/" style={{ color: T.accent, fontWeight: 700, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none', fontFamily: T.fontHead }}>
+        ← Voltar ao início
+      </a>
+    </div>
+  );
+}
+
+function Badge({ children }) {
+  return (
+    <span style={{
+      display: 'inline-block',
+      background: `${T.accent}18`,
+      color: T.accent,
+      border: `1px solid ${T.accent}40`,
+      borderRadius: 20,
+      padding: '3px 12px',
+      fontSize: 11,
+      fontWeight: 700,
+      letterSpacing: '0.06em',
+      fontFamily: T.fontHead,
+      textTransform: 'uppercase',
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function MetaItem({ label, value }) {
+  if (!value) return null;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.muted, fontFamily: T.fontHead }}>
+        {label}
+      </span>
+      <span style={{ fontSize: 14, fontWeight: 600, color: T.text, fontFamily: T.fontBody }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function Divider() {
+  return <div style={{ borderTop: `1px solid ${T.border}`, margin: '36px 0' }} />;
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
 
 export default function Case() {
-  const { slug } = useParams();
+  const [caseData, setCaseData] = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
 
-  const [prod, setProd]       = useState(null);
-  const [proximo, setProximo] = useState(null);
-  const [siteLogo, setSiteLogo] = useState('https://res.cloudinary.com/dhu1cqvrb/image/upload/v1781788827/creapeslogo_jajjgt.png');
-  const [siteWpp, setSiteWpp]   = useState('');
-  const [siteNome, setSiteNome] = useState('Creapes');
-  const [loading, setLoading]   = useState(true);
-  const [videoModal, setVideoModal] = useState(false);
-  const [videoUrl, setVideoUrl]     = useState('');
-  const [nextBgVisible, setNextBgVisible] = useState(false);
-
-  const iframeRef    = useRef(null);
-  const cursorBallRef = useRef(null);
-  const cursorRingRef = useRef(null);
-  const mx = useRef(window.innerWidth / 2);
-  const my = useRef(window.innerHeight / 2);
-  const rx = useRef(mx.current);
-  const ry = useRef(my.current);
-  const rafRef = useRef(null);
-
-  // ── Fetch ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    setLoading(true);
-    getCases()
-      .then((cases) => {
-        const matches = cases.filter((c) => toSlug(c.nome) === slug);
-        const score = (c) => (c.descricao ? 2 : 0) + (c.link_projeto || c.link ? 2 : 0) + (c.resumo ? 1 : 0) + (c.imagem ? 1 : 0);
-        const found = matches.sort((a, b) => score(b) - score(a))[0] || null;
-        if (!found) { setLoading(false); return; }
+    const slug = slugFromPath();
 
-        setProd({
-          ...found,
-          link_projeto: found.link_projeto || found.link || null,
-          descricao:     found.descricao     || '',
-          resumo:        found.resumo        || found.descricao || '',
-          depoimento:    found.depoimento    || '',
-          ficha_tecnica: found.ficha_tecnica || '',
-          diretor:       found.diretor       || null,
-          dop:           found.dop           || null,
-          estoque:       found.estoque       || found.ano || '',
-          categoria_nome: found.categoria_nome || (typeof found.categoria === 'object' ? found.categoria?.nome : found.categoria) || '',
-          whatsapp_projeto: found.whatsapp_projeto || '',
-        });
+    async function fetchCase() {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/cases');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const cases = await res.json();
 
-        const outros = cases.filter((c) => c.id !== found.id && toSlug(c.nome) !== slug);
-        if (outros.length > 0) {
-          const prox = outros[0];
-          setProximo({
-            slug:      toSlug(prox.nome),
-            nome:      prox.nome,
-            descricao: prox.descricao || '',
-            estoque:   prox.estoque || prox.ano || '',
-            imagem:    prox.imagem || null,
-          });
-        }
+        // filtra pelo slug derivado do nome (campo `nome`) ou link_projeto
+        const found = cases.find(c => toSlug(c.nome) === slug);
+        if (!found) { setError(true); return; }
+        setCaseData(found);
+      } catch (err) {
+        console.error('[Case] Erro ao buscar cases:', err);
+        setError(true);
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+    }
 
-    getConfig()
-      .then((config) => {
-        if (!config) return;
-        setSiteLogo(config.logo_url || config.logo || '');
-        setSiteWpp(config.whatsapp_comercial || '');
-        setSiteNome(config.sobre_titulo || 'Creapes');
-      })
-      .catch(() => {});
-  }, [slug]);
-
-  // ── Cursor ───────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const ball = cursorBallRef.current;
-    const ring = cursorRingRef.current;
-    if (!ball || !ring) return;
-
-    const onMove = (e) => { mx.current = e.clientX; my.current = e.clientY; };
-    document.addEventListener('mousemove', onMove);
-
-    const animate = () => {
-      rx.current += (mx.current - rx.current) * 0.12;
-      ry.current += (my.current - ry.current) * 0.12;
-      ball.style.transform = `translate(${mx.current}px,${my.current}px) translate(-50%,-50%)`;
-      ring.style.transform = `translate(${rx.current}px,${ry.current}px) translate(-50%,-50%)`;
-      rafRef.current = requestAnimationFrame(animate);
-    };
-    rafRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      cancelAnimationFrame(rafRef.current);
-    };
+    fetchCase();
   }, []);
 
-  // ── Hover cursor ─────────────────────────────────────────────────────────
+  // ── Keyframes globais ──
   useEffect(() => {
-    if (!prod) return;
-    const els = document.querySelectorAll('a, button, [data-cursor]');
-    const add    = () => document.body.classList.add('cursor-hover');
-    const remove = () => document.body.classList.remove('cursor-hover');
-    els.forEach(el => { el.addEventListener('mouseenter', add); el.addEventListener('mouseleave', remove); });
-    return () => els.forEach(el => { el.removeEventListener('mouseenter', add); el.removeEventListener('mouseleave', remove); });
-  }, [prod]);
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
+      @keyframes spin    { to { transform: rotate(360deg); } }
+      @keyframes fadeUp  { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+      @keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+      .case-hero-img     { transition: transform 0.6s ease; }
+      .case-hero-img:hover { transform: scale(1.015); }
+      .case-back-link    { color: ${T.muted}; text-decoration: none; font-size: 13px; font-weight: 600;
+                           font-family: ${T.fontHead}; letter-spacing: 0.05em; text-transform: uppercase;
+                           display: inline-flex; align-items: center; gap: 6px; transition: color 0.2s; }
+      .case-back-link:hover { color: ${T.accent}; }
+      .case-cta-btn      { display: inline-flex; align-items: center; gap: 8px;
+                           background: ${T.accent}; color: ${T.bg};
+                           border: none; border-radius: 8px; padding: 13px 28px;
+                           font-family: ${T.fontHead}; font-weight: 700; font-size: 13px;
+                           cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;
+                           text-decoration: none; transition: background 0.2s, transform 0.15s; }
+      .case-cta-btn:hover { background: ${T.accentDk}; transform: translateY(-1px); }
+      .case-video-btn    { display: inline-flex; align-items: center; gap: 8px;
+                           background: transparent; color: ${T.text};
+                           border: 1px solid ${T.border}; border-radius: 8px; padding: 12px 24px;
+                           font-family: ${T.fontBody}; font-weight: 600; font-size: 13px;
+                           cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+      .case-video-btn:hover { border-color: ${T.accent}; color: ${T.accent}; }
+      .overlay-backdrop  { position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+                           backdrop-filter: blur(6px); z-index: 9000;
+                           display: flex; align-items: center; justify-content: center; padding: 24px; }
+      .overlay-close     { position: absolute; top: 20px; right: 20px;
+                           background: none; border: none; color: ${T.muted}; font-size: 28px;
+                           cursor: pointer; line-height: 1; transition: color 0.2s; }
+      .overlay-close:hover { color: ${T.text}; }
+      ::-webkit-scrollbar { width: 6px; background: ${T.bg}; }
+      ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 3px; }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
 
-  // ── GSAP entry animation ─────────────────────────────────────────────────
+  // ── Fechar modal com Escape ──
   useEffect(() => {
-    if (!prod || loading) return;
+    function onKey(e) { if (e.key === 'Escape') setVideoOpen(false); }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
-    const tl = gsap.timeline();
-    tl
-      .to('#heroTitleInner', { y: '0%', duration: 1.1, ease: 'expo.out' })
-      .to('#heroTag',        { opacity: 1, y: 0, duration: .6, ease: 'expo.out' }, '-=.7')
-      .to('#heroCategory',   { opacity: 1, y: 0, duration: .6, ease: 'expo.out' }, '-=.55')
-      .to('#heroPlay',       { opacity: 1, duration: .5 }, '-=.5')
-      .to('#heroScrollHint', { opacity: 1, duration: .5 }, '-=.3')
-      .to('#navBack',        { opacity: 1, x: 0, duration: .5 }, '-=.4')
-      .to('#navBrand',       { opacity: 1, y: 0, duration: .5 }, '-=.4')
-      .to('#navCta',         { opacity: 1, x: 0, duration: .5 }, '-=.4');
+  // ── Layout base ──
+  const page = (children) => (
+    <div style={{ background: T.bg, minHeight: '100vh', fontFamily: T.fontBody, color: T.text }}>
+      {children}
+    </div>
+  );
 
-    // Scroll fade-ins
-    document.querySelectorAll('.fade-in').forEach(el => {
-      gsap.fromTo(el,
-        { opacity: 0, y: 50 },
-        { opacity: 1, y: 0, duration: .9, ease: 'expo.out',
-          scrollTrigger: { trigger: el, start: 'top 88%', toggleActions: 'play none none none' } }
-      );
-    });
+  if (loading) return page(<Spinner />);
+  if (error || !caseData) return page(<NotFound />);
 
-    // Counters
-    ['c1','c2','c3','c4'].forEach((id, i) => {
-      const el = document.getElementById(id);
-      if (el) gsap.to(el, { opacity: 1, y: 0, duration: .7, delay: i * .1, ease: 'expo.out',
-        scrollTrigger: { trigger: el, start: 'top 90%' } });
-    });
+  const {
+    nome, descricao, resumo, categoria_nome,
+    imagem, link_projeto, depoimento,
+    ficha_tecnica, diretor, dop, ano,
+  } = caseData;
 
-    // Dividers
-    ['div1','div2','div3'].forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      gsap.to(el, { scaleX: 1, duration: 1.2, ease: 'expo.out',
-        scrollTrigger: { trigger: el, start: 'top 90%' } });
-    });
-
-    // Table rows
-    gsap.utils.toArray('.detail-row').forEach((row, i) => {
-      gsap.to(row, { opacity: 1, x: 0, duration: .5, delay: i * .08, ease: 'expo.out',
-        scrollTrigger: { trigger: row, start: 'top 90%' } });
-    });
-
-    // Hero parallax
-    gsap.to('#heroMedia', { yPercent: 0, ease: 'none',
-      scrollTrigger: { trigger: '.case-hero', start: 'top top', end: 'bottom top', scrub: true } });
-    gsap.to('.hero-content', { yPercent: 30, ease: 'none',
-      scrollTrigger: { trigger: '.case-hero', start: 'top top', end: 'bottom top', scrub: true } });
-
-    ScrollTrigger.refresh();
-
-    return () => { ScrollTrigger.getAll().forEach(t => t.kill()); };
-  }, [prod, loading]);
-
-  // ── Video modal ──────────────────────────────────────────────────────────
-  function openVideo(url) {
-    const final = buildVimeoPlayerUrl(url);
-    if (!final) return;
-    setVideoUrl(final);
-    setVideoModal(true);
-    document.body.style.overflow = 'hidden';
+  // Ficha técnica: pode ser JSON array ou string separada por \n
+  let fichaTecnicaItems = [];
+  if (ficha_tecnica) {
+    try {
+      const parsed = JSON.parse(ficha_tecnica);
+      fichaTecnicaItems = Array.isArray(parsed) ? parsed : [ficha_tecnica];
+    } catch {
+      fichaTecnicaItems = ficha_tecnica.split('\n').filter(Boolean);
+    }
   }
 
-  function closeVideo() {
-    setVideoModal(false);
-    setVideoUrl('');
-    document.body.style.overflow = '';
-  }
+  const hasMeta     = diretor || dop || ano || categoria_nome;
+  const hasVideo    = Boolean(link_projeto);
+  const hasDepo     = Boolean(depoimento);
+  const hasFicha    = fichaTecnicaItems.length > 0;
 
-  // ── Render ───────────────────────────────────────────────────────────────
-  if (loading) return <div className="not-found"><p>Carregando...</p></div>;
-  if (!prod)   return <div className="not-found"><p>Case não encontrado.</p></div>;
-
-  const bgVideo = prod.link_projeto ? buildVimeoEmbedUrl(prod.link_projeto) : null;
-  const bgVideoSrc = bgVideo
-    ? `${bgVideo}${bgVideo.includes('?') ? '&' : '?'}background=1&autoplay=1&loop=1&muted=1&quality=1080p`
-    : null;
-
-  return (
+  return page(
     <>
-      {/* Cursor */}
-      <div id="cursor"><div className="cursor-ball" ref={cursorBallRef}></div></div>
-      <div className="cursor-ring" ref={cursorRingRef}></div>
-
-      {/* Nav */}
-      <nav className="case-nav">
-        <Link to="/" className="nav-back" id="navBack">
-          <svg viewBox="0 0 24 24"><polyline points="19 12 5 12"/><polyline points="12 5 5 12 12 19"/></svg>
-          Voltar
-        </Link>
-        <Link to="/" className="nav-brand" id="navBrand">
-          {siteLogo
-            ? <img src={siteLogo} alt={siteNome} />
-            : siteNome}
-        </Link>
-        {siteWpp
-          ? <a href={`https://wa.me/55${siteWpp.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="nav-cta" id="navCta">Fale Conosco</a>
-          : <Link to="/#contato" className="nav-cta" id="navCta">Fale Conosco</Link>}
-      </nav>
-
-      {/* Hero */}
-      <section className="case-hero">
-        <div className="hero-media" id="heroMedia">
-          {bgVideoSrc
-            ? <iframe src={bgVideoSrc} frameBorder="0" allow="autoplay; fullscreen" allowFullScreen title="hero-bg" />
-            : prod.imagem
-              ? <img src={prod.imagem} alt={prod.nome} />
-              : <div style={{width:'100%',height:'100%',background:'linear-gradient(135deg,#0a0a0a 0%,#1a1a1a 50%,#0a0a0a 100%)'}} />}
+      {/* ── Modal de vídeo ─────────────────────────────────────────────────── */}
+      {videoOpen && hasVideo && (
+        <div className="overlay-backdrop" onClick={() => setVideoOpen(false)}>
+          <button className="overlay-close" onClick={() => setVideoOpen(false)} aria-label="Fechar vídeo">×</button>
+          <div
+            style={{ position: 'relative', width: '100%', maxWidth: 960, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <iframe
+              src={link_projeto}
+              title={nome}
+              frameBorder="0"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
+          </div>
         </div>
-        <div className="hero-overlay" />
-        <div className="hero-grain" />
+      )}
 
-        {prod.link_projeto && (
-          <button className="hero-play" id="heroPlay" onClick={() => openVideo(prod.link_projeto)}>
-            <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          </button>
+      {/* ── Topo / breadcrumb ───────────────────────────────────────────────── */}
+      <div style={{ padding: '28px 24px 0', maxWidth: 1100, margin: '0 auto' }}>
+        <a href="/" className="case-back-link">
+          <span style={{ fontSize: 16, lineHeight: 1 }}>←</span> Todos os projetos
+        </a>
+      </div>
+
+      {/* ── Hero ────────────────────────────────────────────────────────────── */}
+      <header style={{ maxWidth: 1100, margin: '0 auto', padding: '36px 24px 0', animation: 'fadeUp 0.5s ease both' }}>
+
+        {/* Eyebrow */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+          {categoria_nome && <Badge>{categoria_nome}</Badge>}
+          {ano && <span style={{ fontSize: 12, color: T.muted, fontFamily: T.fontHead, letterSpacing: '0.06em' }}>{ano}</span>}
+        </div>
+
+        {/* Título */}
+        <h1 style={{
+          fontFamily: T.fontHead,
+          fontSize: 'clamp(32px, 6vw, 64px)',
+          fontWeight: 700,
+          lineHeight: 1.08,
+          letterSpacing: '-0.03em',
+          color: T.text,
+          margin: '0 0 16px',
+          maxWidth: 800,
+        }}>
+          {nome}
+        </h1>
+
+        {/* Subtítulo / descricao */}
+        {descricao && (
+          <p style={{
+            fontFamily: T.fontBody,
+            fontSize: 'clamp(15px, 2vw, 18px)',
+            color: T.muted,
+            lineHeight: 1.6,
+            maxWidth: 640,
+            margin: '0 0 32px',
+          }}>
+            {descricao}
+          </p>
         )}
 
-        <div className="hero-content">
-          <div className="hero-meta">
-            <span className="hero-tag" id="heroTag">{prod.categoria_nome || 'Projeto'}</span>
-            <span className="hero-category" id="heroCategory">{prod.descricao || 'Audiovisual'}</span>
+        {/* CTAs */}
+        {hasVideo && (
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 40 }}>
+            <button className="case-cta-btn" onClick={() => setVideoOpen(true)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              Assistir projeto
+            </button>
           </div>
-          <h1 className="hero-title">
-            <span className="hero-title-inner" id="heroTitleInner">{prod.nome}</span>
-          </h1>
-        </div>
+        )}
 
-        <div className="hero-scroll-hint" id="heroScrollHint">
-          <div className="scroll-line" />
-          <span>Scroll</span>
-        </div>
-      </section>
+        {/* Imagem hero */}
+        {imagem && (
+          <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${T.border}`, position: 'relative' }}>
+            {hasVideo && (
+              <button
+                onClick={() => setVideoOpen(true)}
+                aria-label="Reproduzir vídeo"
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%',
+                  background: 'transparent', border: 'none', cursor: 'pointer', zIndex: 2,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <div style={{
+                  width: 72, height: 72, borderRadius: '50%',
+                  background: 'rgba(0,0,0,0.7)', border: `2px solid ${T.accent}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backdropFilter: 'blur(4px)', transition: 'transform 0.2s',
+                }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill={T.accent} style={{ marginLeft: 3 }}>
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </div>
+              </button>
+            )}
+            <img
+              src={imagem}
+              alt={nome}
+              className="case-hero-img"
+              style={{ display: 'block', width: '100%', maxHeight: 560, objectFit: 'cover' }}
+            />
+          </div>
+        )}
+      </header>
 
-      {/* Counter */}
-      <div className="counter-bar">
-        <div className="counter-item" id="c1">
-          <div className="counter-label">Ano</div>
-          <div className="counter-value">{prod.estoque || '—'}<span className="accent">.</span></div>
-        </div>
-        <div className="counter-item" id="c2">
-          <div className="counter-label">Categoria</div>
-          <div className="counter-value" style={{fontSize:'clamp(1rem,2vw,1.8rem)',paddingTop:'.6rem'}}>{prod.categoria_nome || 'Portfolio'}</div>
-        </div>
-        <div className="counter-item" id="c3">
-          <div className="counter-label">Estilo / Local</div>
-          <div className="counter-value" style={{fontSize:'clamp(1rem,2vw,1.8rem)',paddingTop:'.6rem'}}>{prod.descricao || '—'}</div>
-        </div>
-        <div className="counter-item" id="c4">
-          <div className="counter-label">Produtora</div>
-          <div className="counter-value" style={{fontSize:'clamp(1rem,2vw,1.8rem)',paddingTop:'.6rem',color:'var(--accent)'}}>{siteNome}</div>
-        </div>
-      </div>
+      {/* ── Corpo ────────────────────────────────────────────────────────────── */}
+      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 24px 80px', animation: 'fadeUp 0.6s 0.1s ease both', opacity: 0, animationFillMode: 'forwards' }}>
 
-      {/* Brief */}
-      <section className="section">
-        <div className="section-label fade-in">Case</div>
-        <div className="brief-section">
+        {/* Grade: Resumo + Ficha Técnica */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: hasFicha || hasMeta ? '1fr 320px' : '1fr',
+          gap: 48,
+          alignItems: 'start',
+        }}>
+
+          {/* Coluna esquerda: resumo + depoimento */}
           <div>
-            <h2 className="brief-headline fade-in">Um projeto que<br/><em>fala por si</em><br/>mesmo.</h2>
-          </div>
-          <div className="brief-right fade-in">
-            <p className="brief-body">
-              {prod.resumo || 'Este projeto representa o melhor da produção audiovisual de alto impacto — cada quadro cuidadosamente planejado para criar experiências visuais que ficam na memória do espectador.'}
-            </p>
-            <div className="brief-chips">
-              {prod.descricao && <span className="chip">{prod.descricao}</span>}
-              {prod.estoque   && <span className="chip">{prod.estoque}</span>}
-              {prod.categoria_nome && <span className="chip">{prod.categoria_nome}</span>}
-              <span className="chip">Audiovisual</span>
-              <span className="chip">{siteNome}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="divider" id="div1" />
-
-      {/* Full video */}
-      {prod.link_projeto && (
-        <section className="full-video-section">
-          <div className="full-video-wrapper fade-in" onClick={() => openVideo(prod.link_projeto)} id="fullVideoWrapper">
-            {prod.imagem
-              ? <img src={prod.imagem} alt={prod.nome} style={{position:'absolute',inset:0,zIndex:0}} />
-              : <div style={{position:'absolute',inset:0,background:'#111',zIndex:0}} />}
-            <div className="full-video-overlay" style={{position:'absolute',inset:0,zIndex:1,display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <div className="full-video-play">
-                <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Marquee */}
-      <div className="marquee-section">
-        <div className="marquee-track">
-          {[...Array(2)].map((_, r) => (
-            <span key={r} style={{display:'contents'}}>
-              <span className="marquee-item">{prod.nome} <span className="dot">✦</span></span>
-              <span className="marquee-item filled">{siteNome} <span className="dot">✦</span></span>
-              <span className="marquee-item">{prod.descricao || 'Audiovisual'} <span className="dot">✦</span></span>
-              <span className="marquee-item filled">{prod.estoque || '2024'} <span className="dot">✦</span></span>
-              <span className="marquee-item">Elite Audiovisual <span className="dot">✦</span></span>
-              <span className="marquee-item filled">Produção de Vídeo <span className="dot">✦</span></span>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Quote */}
-      <section className="quote-section section">
-        <div className="quote-bg">{siteNome.slice(0,2).toUpperCase()}</div>
-        <div className="quote-mark fade-in">"</div>
-        <blockquote className="quote-text fade-in">
-          {prod.depoimento || 'Cada projeto é uma oportunidade de contar uma história que ressoa — visualmente, emocionalmente, para sempre.'}
-        </blockquote>
-        <cite className="quote-author fade-in">— {siteNome}, Produtora Audiovisual</cite>
-      </section>
-
-      <div className="divider" id="div3" />
-
-      {/* Details */}
-      <section className="section">
-        <div className="details-section">
-          <div>
-            <div className="section-label fade-in">Ficha Técnica</div>
-            <h2 className="details-title fade-in">Detalhes<br/>do Projeto</h2>
-            <p className="details-desc fade-in">
-              {prod.ficha_tecnica || 'Produção realizada com equipamentos de última geração, equipe especializada e processos criativos que garantem o mais alto padrão de qualidade audiovisual.'}
-            </p>
-          </div>
-          <div>
-            <table className="details-table">
-              <tbody>
-                <tr className="detail-row"><td>Projeto</td><td>{prod.nome}</td></tr>
-                {prod.estoque && <tr className="detail-row"><td>Ano</td><td>{prod.estoque}</td></tr>}
-                {prod.descricao && <tr className="detail-row"><td>Estilo / Local</td><td>{prod.descricao}</td></tr>}
-                {prod.categoria_nome && <tr className="detail-row"><td>Seção</td><td>{prod.categoria_nome}</td></tr>}
-                <tr className="detail-row"><td>Produtora</td><td>{siteNome}</td></tr>
-                {prod.diretor && <tr className="detail-row"><td>Direção</td><td>{prod.diretor}</td></tr>}
-                {prod.dop     && <tr className="detail-row"><td>Dir. Fotografia</td><td>{prod.dop}</td></tr>}
-                {prod.link_projeto && (
-                  <tr className="detail-row">
-                    <td>Assistir</td>
-                    <td><a href={prod.link_projeto} target="_blank" rel="noreferrer" style={{color:'var(--accent)',textDecoration:'underline',textUnderlineOffset:'3px'}}>Ver no Vimeo ↗</a></td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="cta-section">
-        <div className="cta-glow" />
-        <p className="cta-eyebrow fade-in">Vamos criar juntos</p>
-        <h2 className="cta-headline fade-in">Seu próximo<br/>projeto aqui.</h2>
-        <div className="cta-btns fade-in">
-          {siteWpp && (
-            <a href={`https://wa.me/55${siteWpp.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="btn-primary">
-              <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-              Falar no WhatsApp
-            </a>
-          )}
-          <Link to="/" className="btn-secondary">
-            <svg viewBox="0 0 24 24"><polyline points="19 12 5 12"/><polyline points="12 5 5 12 12 19"/></svg>
-            Ver Portfólio Completo
-          </Link>
-        </div>
-      </section>
-
-      {/* Next */}
-      {proximo && (
-        <div className="next-section">
-          <Link
-            to={`/case/${proximo.slug}`}
-            className="next-inner"
-            id="nextLink"
-            onMouseEnter={() => setNextBgVisible(true)}
-            onMouseLeave={() => setNextBgVisible(false)}
-          >
-            <div>
-              <p className="next-label">Próximo Projeto</p>
-              <h3 className="next-title">{proximo.nome}</h3>
-              {proximo.descricao && (
-                <p style={{fontSize:'.8rem',color:'var(--muted)',marginTop:'.5rem',letterSpacing:'.05em'}}>
-                  {proximo.descricao}{proximo.estoque ? ` · ${proximo.estoque}` : ''}
+            {resumo && (
+              <section>
+                <h2 style={{ fontFamily: T.fontHead, fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.accent, marginBottom: 16 }}>
+                  Sobre o projeto
+                </h2>
+                <p style={{ fontFamily: T.fontBody, fontSize: 16, lineHeight: 1.75, color: T.text, margin: 0, whiteSpace: 'pre-line' }}>
+                  {resumo}
                 </p>
+              </section>
+            )}
+
+            {hasDepo && (
+              <>
+                <Divider />
+                <section>
+                  <h2 style={{ fontFamily: T.fontHead, fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.accent, marginBottom: 20 }}>
+                    Depoimento
+                  </h2>
+                  <blockquote style={{
+                    margin: 0,
+                    padding: '20px 24px',
+                    background: T.bg2,
+                    border: `1px solid ${T.border}`,
+                    borderLeft: `3px solid ${T.accent}`,
+                    borderRadius: '0 10px 10px 0',
+                  }}>
+                    <p style={{ fontFamily: T.fontBody, fontSize: 15, lineHeight: 1.7, color: T.text, margin: 0, fontStyle: 'italic' }}>
+                      "{depoimento}"
+                    </p>
+                  </blockquote>
+                </section>
+              </>
+            )}
+          </div>
+
+          {/* Coluna direita: meta + ficha técnica */}
+          {(hasMeta || hasFicha) && (
+            <aside style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+
+              {/* Meta */}
+              {hasMeta && (
+                <div style={{
+                  background: T.bg2,
+                  border: `1px solid ${T.border}`,
+                  borderRadius: 12,
+                  padding: '24px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 18,
+                }}>
+                  <MetaItem label="Direção"  value={diretor} />
+                  <MetaItem label="D.O.P."   value={dop} />
+                  <MetaItem label="Ano"      value={ano} />
+                  <MetaItem label="Categoria" value={categoria_nome} />
+                </div>
               )}
-            </div>
-            <div className="next-arrow">
-              <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </div>
-          </Link>
-          {proximo.imagem && (
-            <div className="next-bg" style={{backgroundImage:`url('${proximo.imagem}')`, opacity: nextBgVisible ? 1 : 0}} />
+
+              {/* Ficha técnica */}
+              {hasFicha && (
+                <div style={{
+                  background: T.bg2,
+                  border: `1px solid ${T.border}`,
+                  borderRadius: 12,
+                  padding: '24px 20px',
+                }}>
+                  <h3 style={{
+                    fontFamily: T.fontHead,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    color: T.accent,
+                    marginTop: 0,
+                    marginBottom: 16,
+                  }}>
+                    Ficha Técnica
+                  </h3>
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {fichaTecnicaItems.map((item, i) => (
+                      <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: T.text, fontFamily: T.fontBody, lineHeight: 1.5 }}>
+                        <span style={{ color: T.accent, marginTop: 2, flexShrink: 0 }}>·</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Link externo (fallback se não for Vimeo embed) */}
+              {hasVideo && !link_projeto.startsWith('https://player.vimeo') && !link_projeto.includes('.mp4') && (
+                <a
+                  href={link_projeto}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="case-cta-btn"
+                  style={{ justifyContent: 'center' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  Ver projeto completo
+                </a>
+              )}
+            </aside>
           )}
         </div>
-      )}
 
-      {/* Footer */}
-      <footer className="case-footer">
-        <span className="footer-copy">© {prod.estoque || '2024'} {siteNome}. Todos os direitos reservados.</span>
-        <button className="footer-back-top" onClick={() => window.scrollTo({top:0,behavior:'smooth'})}>
-          <svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
-          Voltar ao topo
-        </button>
-      </footer>
-
-      {/* Video Modal */}
-      <div className={`video-modal${videoModal ? ' active' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) closeVideo(); }}>
-        <button className="modal-close" onClick={closeVideo}>✕</button>
-        <div className="modal-iframe-wrap">
-          <iframe ref={iframeRef} src={videoModal ? videoUrl : ''} allow="autoplay; fullscreen" allowFullScreen title="video" />
+        {/* ── Rodapé: botão de voltar ── */}
+        <Divider />
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <a href="/" className="case-back-link">
+            <span style={{ fontSize: 16 }}>←</span> Ver todos os projetos
+          </a>
         </div>
-      </div>
+
+      </main>
+
+      {/* ── Responsividade mínima via media query inline ── */}
+      <style>{`
+        @media (max-width: 700px) {
+          main > div[style*="grid-template-columns"] {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </>
   );
 }
