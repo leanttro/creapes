@@ -178,7 +178,7 @@ export default function Home() {
       <div style={{ opacity: loaderDone ? 1 : 0, pointerEvents: loaderDone ? 'auto' : 'none', transition: 'opacity 0.3s' }}>
         <Navbar brandName={site.nome} brandLogo={site.logo} />
 
-        <Hero slides={heroSlides} />
+        <Hero slides={heroSlides} ready={loaderDone} />
 
         <Clientes logos={clientLogos} />
 
