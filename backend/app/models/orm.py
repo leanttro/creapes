@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Date, Time, DateTime
+from sqlalchemy import Boolean, Column, Integer, String, Text, Date, Time, DateTime
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -39,7 +39,7 @@ class BlogPost(Base):
     resumo          = Column(Text)
     conteudo        = Column(Text)
     imagem_capa     = Column(String(500))
-    publicado       = Column(Integer, default=1)
+    publicado       = Column(Boolean, default=True)   # corrigido: era Integer
     data_publicacao = Column(DateTime, server_default=func.now())
 
 class Lead(Base):
