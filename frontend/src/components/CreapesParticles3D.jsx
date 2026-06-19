@@ -58,7 +58,7 @@ export default function CreapesParticles3D({ texto = 'CREAPES', height = 260 }) 
     scene.fog = new THREE.FogExp2(0x050505, isMobile ? 0.0009 : 0.0016);
 
     const camera = new THREE.PerspectiveCamera(45, width / heightPx, 1, 5000);
-    camera.position.z = isMobile ? 900 : 480;
+    camera.position.z = isMobile ? 950 : 560;
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -126,8 +126,8 @@ export default function CreapesParticles3D({ texto = 'CREAPES', height = 260 }) 
     function initParticles() {
       const textCanvas = document.createElement('canvas');
       const ctx2d = textCanvas.getContext('2d', { willReadFrequently: true });
-      const w = 1400;
-      const h = 360;
+      const w = 1700;
+      const h = 460;
       textCanvas.width = w;
       textCanvas.height = h;
 
@@ -137,7 +137,7 @@ export default function CreapesParticles3D({ texto = 'CREAPES', height = 260 }) 
       ctx2d.textAlign = 'center';
       ctx2d.textBaseline = 'middle';
       ctx2d.fillStyle = '#ffffff';
-      ctx2d.font = `700 ${isMobile ? 130 : 170}px "Space Grotesk", sans-serif`;
+      ctx2d.font = `700 ${isMobile ? 170 : 230}px "Space Grotesk", sans-serif`;
       ctx2d.fillText(texto, w / 2, h / 2);
 
       const imgData = ctx2d.getImageData(0, 0, w, h).data;
