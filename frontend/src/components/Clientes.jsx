@@ -100,7 +100,7 @@ export default function Clientes({ logos = [] }) {
           display: flex;
           gap: 4rem;
           align-items: center;
-          animation: marquee-clients 120s linear infinite;
+          animation: marquee-clients 40s linear infinite;
           width: max-content;
         }
         .clients-track.reverse {
