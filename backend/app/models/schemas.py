@@ -8,7 +8,7 @@ Sem ORM, sem engine, sem SessionLocal, sem create_all.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, field_validator
@@ -128,8 +128,17 @@ class BlogPostInput(BaseModel):
     resumo: Optional[str] = None
     conteudo: Optional[str] = None
     imagem_capa: Optional[str] = None
-    data_publicacao: Optional[str] = None   # ISO date: "2024-06-01"
+    data_publicacao: Optional[datetime] = None
     publicado: bool = True
+
+    @field_validator("data_publicacao", mode="before")
+    @classmethod
+    def parse_data(cls, v):
+        if v is None or v == "":
+            return None
+        if isinstance(v, datetime):
+            return v
+        return datetime.fromisoformat(str(v))
 
 
 class BlogPostOut(BaseModel):
@@ -139,7 +148,7 @@ class BlogPostOut(BaseModel):
     resumo: Optional[str]
     conteudo: Optional[str]
     imagem_capa: Optional[str]
-    data_publicacao: Optional[str]
+    data_publicacao: Optional[datetime]
     publicado: bool
 
     model_config = {"from_attributes": True}
