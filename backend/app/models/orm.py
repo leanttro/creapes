@@ -2,10 +2,12 @@ from sqlalchemy import Boolean, Column, Integer, String, Text, Date, Time, DateT
 from sqlalchemy.sql import func
 from app.database import Base
 
+
 class Categoria(Base):
     __tablename__ = "categorias"
     id   = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100), nullable=False)
+
 
 class Case(Base):
     __tablename__ = "cases"
@@ -25,11 +27,13 @@ class Case(Base):
     sort             = Column(Integer, default=0)
     ano              = Column(String(10))
 
+
 class Servico(Base):
     __tablename__ = "servicos"
     id     = Column(Integer, primary_key=True, index=True)
     titulo = Column(String(200), nullable=False)
     resumo = Column(Text)
+
 
 class BlogPost(Base):
     __tablename__ = "blog_posts"
@@ -39,8 +43,9 @@ class BlogPost(Base):
     resumo          = Column(Text)
     conteudo        = Column(Text)
     imagem_capa     = Column(String(500))
-    publicado       = Column(Boolean, default=True)   # corrigido: era Integer
+    publicado       = Column(Boolean, default=True)
     data_publicacao = Column(DateTime, server_default=func.now())
+
 
 class Lead(Base):
     __tablename__ = "leads"
@@ -51,6 +56,7 @@ class Lead(Base):
     mensagem  = Column(Text)
     criado_em = Column(DateTime, server_default=func.now())
 
+
 class Horario(Base):
     __tablename__ = "agenda"
     id        = Column(Integer, primary_key=True, index=True)
@@ -58,6 +64,7 @@ class Horario(Base):
     data      = Column(Date)
     hora      = Column(Time)
     descricao = Column(Text)
+
 
 class Config(Base):
     __tablename__ = "config"
@@ -67,3 +74,10 @@ class Config(Base):
     logos_clientes     = Column(Text)
     whatsapp_comercial = Column(String(50))
     instagram_url      = Column(String(300))
+
+
+class AdminUser(Base):
+    __tablename__ = "admin_users"
+    id         = Column(Integer, primary_key=True, index=True)
+    email      = Column(String(255), nullable=False, unique=True)
+    senha_hash = Column(String(255), nullable=False)
