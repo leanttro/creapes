@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.dependencies.auth import exigir_admin
 from app.models.orm import Categoria as CategoriaORM
 from app.models.schemas import CategoriaInput, CategoriaOut, MensagemOut
 from app.services.cache import cache_get, cache_invalidate, cache_set
@@ -36,7 +37,9 @@ async def listar_categorias(db: AsyncSession = Depends(get_db)) -> List[Categori
 
 @router.post("", response_model=CategoriaOut, status_code=201)
 async def criar_categoria(
-    dados: CategoriaInput, db: AsyncSession = Depends(get_db)
+    dados: CategoriaInput,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(exigir_admin),
 ) -> CategoriaOut:
     nova = CategoriaORM(**dados.model_dump())
     db.add(nova)
@@ -51,7 +54,10 @@ async def criar_categoria(
 
 @router.put("/{categoria_id}", response_model=CategoriaOut)
 async def atualizar_categoria(
-    categoria_id: int, dados: CategoriaInput, db: AsyncSession = Depends(get_db)
+    categoria_id: int,
+    dados: CategoriaInput,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(exigir_admin),
 ) -> CategoriaOut:
     result = await db.execute(select(CategoriaORM).where(CategoriaORM.id == categoria_id))
     row = result.scalar_one_or_none()
@@ -72,7 +78,7 @@ async def atualizar_categoria(
 
 @router.delete("/{categoria_id}", response_model=MensagemOut)
 async def deletar_categoria(
-    categoria_id: int, db: AsyncSession = Depends(get_db)
+    categoria_id: int, db: AsyncSession = Depends(get_db), _: str = Depends(exigir_admin)
 ) -> MensagemOut:
     result = await db.execute(select(CategoriaORM).where(CategoriaORM.id == categoria_id))
     row = result.scalar_one_or_none()
