@@ -14,6 +14,18 @@ from typing import Optional
 from pydantic import BaseModel, field_validator
 
 
+# ── Autenticação ──────────────────────────────────────────────────────────────
+
+class LoginInput(BaseModel):
+    email: str
+    senha: str
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
 # ── Contato ───────────────────────────────────────────────────────────────────
 
 class ContatoInput(BaseModel):
@@ -76,7 +88,6 @@ class CaseInput(BaseModel):
     @field_validator("categoria_id", mode="before")
     @classmethod
     def categoria_id_vazio_para_none(cls, v):
-        # O <select> do painel envia "" quando "Sem Seção" está marcado
         if v == "" or v is None:
             return None
         return v
@@ -171,8 +182,8 @@ class LeadOut(BaseModel):
 
 class HorarioSchema(BaseModel):
     titulo: str
-    data: str           # ISO date: "2024-07-10"
-    hora: str           # "14:00"
+    data: str
+    hora: str
     descricao: Optional[str] = None
 
 
@@ -189,7 +200,7 @@ class HorarioOut(HorarioSchema):
 class ConfigSchema(BaseModel):
     sobre_titulo: Optional[str] = None
     sobre_texto: Optional[str] = None
-    logos_clientes: Optional[str] = None    # URLs separadas por vírgula
+    logos_clientes: Optional[str] = None
     whatsapp_comercial: Optional[str] = None
     instagram_url: Optional[str] = None
 
