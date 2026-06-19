@@ -12,7 +12,7 @@ function toSlug(nome) {
     .replace(/^-|-$/g, '');
 }
 
-export default function Portfolio({ items = [] }) {
+export default function Portfolio({ items = [], ready = true }) {
   const sectionRef = useRef(null);
   const trackRef = useRef(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 900);
@@ -93,6 +93,8 @@ export default function Portfolio({ items = [] }) {
               <PortfolioItem
                 key={item.id}
                 item={item}
+                idx={idx}
+                ready={ready}
                 wrapperAlignClass={wrapperAlignClass}
                 sizeClass={sizeClass}
                 captionParts={captionParts}
@@ -353,7 +355,7 @@ export default function Portfolio({ items = [] }) {
   );
 }
 
-function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts, isMobile }) {
+function PortfolioItem({ item, idx, ready, wrapperAlignClass, sizeClass, captionParts, isMobile }) {
   const itemRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -375,6 +377,10 @@ function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts, isMob
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  // Igual ao Hero: idx 0 carrega assim que ready=true (sem esperar o IntersectionObserver),
+  // os demais só montam quando entram no viewport via isVisible.
+  const shouldLoad = ready && (idx === 0 || isVisible);
 
   return (
     <div
@@ -401,7 +407,7 @@ function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts, isMob
         className={`port-item ${sizeClass}`}
         onClick={() => { window.location.href = `/case/${toSlug(item.nome)}`; }}
       >
-        {isVisible && item.isVimeo && item.bgLink ? (
+        {shouldLoad && item.isVimeo && item.bgLink ? (
           <div
             className="vimeo-port-bg"
             style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none' }}
@@ -414,7 +420,7 @@ function PortfolioItem({ item, wrapperAlignClass, sizeClass, captionParts, isMob
             />
           </div>
         ) : (
-          isVisible && !item.isVimeo && item.bgLink && (
+          shouldLoad && !item.isVimeo && item.bgLink && (
             <video src={item.bgLink} autoPlay loop muted playsInline style={{ pointerEvents: 'none' }} />
           )
         )}
