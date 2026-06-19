@@ -9,10 +9,159 @@ import Clientes from '../components/Clientes';
 import Evolve from '../components/Evolve';
 import Portfolio from '../components/Portfolio';
 import Footer from '../components/Footer';
-import { getCases, getConfig } from '../lib/api';
+import { getCases, getConfig, getBlogPosts } from '../lib/api';
+import { Link } from 'react-router-dom';
 
 const Trailer3D = lazy(() => import('../components/Trailer3D'));
 const InstagramFeed = lazy(() => import('../components/InstagramFeed'));
+
+// ── Helper de data pro carrossel do blog ──────────────────────────────────────
+function formatBlogDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// ── Seção de carrossel do blog ────────────────────────────────────────────────
+function BlogCarousel() {
+  const [posts, setPosts] = useState([]);
+  const trackRef = useState(() => ({ current: null }))[0];
+
+  useEffect(() => {
+    getBlogPosts()
+      .then((data) => setPosts(Array.isArray(data) ? data.slice(0, 8) : []))
+      .catch(() => setPosts([]));
+  }, []);
+
+  const scrollBy = (dir) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * (el.clientWidth * 0.8), behavior: 'smooth' });
+  };
+
+  if (posts.length === 0) return null;
+
+  return (
+    <section className="blog-carousel fade-in">
+      <div className="blog-carousel__header">
+        <div>
+          <p className="blog-carousel__eyebrow">
+            <span className="blog-carousel__eyebrow-line" />
+            Blog
+          </p>
+          <h2 className="blog-carousel__title">Bastidores &amp; ideias</h2>
+        </div>
+        <div className="blog-carousel__actions">
+          <button type="button" aria-label="Anterior" className="blog-carousel__nav" onClick={() => scrollBy(-1)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button type="button" aria-label="Próximo" className="blog-carousel__nav" onClick={() => scrollBy(1)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <Link to="/blog" className="blog-carousel__viewall">Ver tudo</Link>
+        </div>
+      </div>
+
+      <div className="blog-carousel__track" ref={(el) => { trackRef.current = el; }}>
+        {posts.map((post) => (
+          <Link to={`/blog/${post.slug}`} key={post.id} className="blog-carousel__card">
+            <div className="blog-carousel__thumb">
+              {post.imagem_capa ? (
+                <img src={post.imagem_capa} alt={post.titulo} loading="lazy" />
+              ) : (
+                <div className="blog-carousel__thumb-placeholder" />
+              )}
+            </div>
+            <time className="blog-carousel__date">{formatBlogDate(post.data_publicacao)}</time>
+            <h3 className="blog-carousel__card-title">{post.titulo}</h3>
+            <p className="blog-carousel__card-resumo">{post.resumo}</p>
+          </Link>
+        ))}
+      </div>
+
+      <style>{`
+        .blog-carousel {
+          padding: 6rem 4rem;
+          background: var(--bg, #0b0d0f);
+        }
+        .blog-carousel__header {
+          display: flex; align-items: flex-end; justify-content: space-between;
+          margin-bottom: 2.5rem; gap: 1.5rem; flex-wrap: wrap;
+        }
+        .blog-carousel__eyebrow {
+          display: flex; align-items: center; gap: 1rem;
+          font-size: .7rem; text-transform: uppercase; letter-spacing: .2em;
+          color: #d0ff00; margin-bottom: 1rem;
+        }
+        .blog-carousel__eyebrow-line { display: block; width: 32px; height: 1px; background: #d0ff00; }
+        .blog-carousel__title {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: clamp(1.8rem, 3vw, 2.8rem); font-weight: 700;
+          letter-spacing: -0.03em; color: #f0f0f0;
+        }
+        .blog-carousel__actions { display: flex; align-items: center; gap: .75rem; }
+        .blog-carousel__nav {
+          width: 42px; height: 42px; border-radius: 50%;
+          border: 1px solid rgba(240,240,240,0.15); background: transparent;
+          color: #f0f0f0; display: flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: border-color .3s, color .3s;
+        }
+        .blog-carousel__nav svg { width: 18px; height: 18px; }
+        .blog-carousel__nav:hover { border-color: #d0ff00; color: #d0ff00; }
+        .blog-carousel__viewall {
+          font-size: .72rem; text-transform: uppercase; letter-spacing: .15em;
+          color: rgba(240,240,240,0.6); font-weight: 700; margin-left: .5rem;
+          font-family: 'Space Grotesk', sans-serif; transition: color .3s;
+          text-decoration: none; white-space: nowrap;
+        }
+        .blog-carousel__viewall:hover { color: #d0ff00; }
+
+        .blog-carousel__track {
+          display: flex; gap: 1.5rem; overflow-x: auto; scroll-snap-type: x mandatory;
+          padding-bottom: .5rem; scrollbar-width: none;
+        }
+        .blog-carousel__track::-webkit-scrollbar { display: none; }
+
+        .blog-carousel__card {
+          flex: 0 0 320px; scroll-snap-align: start;
+          display: flex; flex-direction: column; gap: .75rem;
+          text-decoration: none; color: inherit;
+        }
+        .blog-carousel__thumb {
+          height: 200px; border-radius: 4px; overflow: hidden;
+          background: linear-gradient(135deg, #1a1e22, #111416);
+        }
+        .blog-carousel__thumb img {
+          width: 100%; height: 100%; object-fit: cover; transition: transform .8s cubic-bezier(0.16,1,0.3,1);
+        }
+        .blog-carousel__card:hover .blog-carousel__thumb img { transform: scale(1.05); }
+        .blog-carousel__thumb-placeholder { width: 100%; height: 100%; }
+        .blog-carousel__date {
+          font-size: .68rem; text-transform: uppercase; letter-spacing: .15em;
+          color: rgba(240,240,240,0.38);
+        }
+        .blog-carousel__card-title {
+          font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; font-weight: 700;
+          line-height: 1.25; letter-spacing: -0.01em; color: #f0f0f0; transition: color .3s;
+        }
+        .blog-carousel__card:hover .blog-carousel__card-title { color: #d0ff00; }
+        .blog-carousel__card-resumo {
+          font-size: .85rem; line-height: 1.6; color: rgba(240,240,240,0.5);
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+          .blog-carousel { padding: 3.5rem 1.8rem; }
+          .blog-carousel__card { flex: 0 0 78vw; }
+        }
+      `}</style>
+    </section>
+  );
+}
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -191,6 +340,8 @@ export default function Home() {
         }>
           <Trailer3D />
         </Suspense>
+
+        <BlogCarousel />
 
         <Suspense fallback={null}>
           <InstagramFeed logosClientes={logosClientesRaw} />
