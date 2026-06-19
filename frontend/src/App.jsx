@@ -1,9 +1,11 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import Home from './pages/Home';
+import { isLoggedIn } from './lib/api';
 
 const Case     = lazy(() => import('./pages/Case'));
 const Painel   = lazy(() => import('./pages/Painel'));
+const Login    = lazy(() => import('./pages/Login'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 
 const Loading = () => (
@@ -22,6 +24,14 @@ const Loading = () => (
   </div>
 );
 
+/** Protege rotas de admin: redireciona para /login se não autenticado */
+function RotaProtegida({ children }) {
+  if (!isLoggedIn()) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -32,8 +42,16 @@ export default function App() {
           <Suspense fallback={<Loading />}><Case /></Suspense>
         } />
 
+        {/* Login — redireciona pro painel se já autenticado */}
+        <Route path="/login" element={
+          <Suspense fallback={<Loading />}><Login /></Suspense>
+        } />
+
+        {/* Painel — exige login */}
         <Route path="/painel" element={
-          <Suspense fallback={<Loading />}><Painel /></Suspense>
+          <RotaProtegida>
+            <Suspense fallback={<Loading />}><Painel /></Suspense>
+          </RotaProtegida>
         } />
 
         <Route path="/blog" element={
