@@ -1,42 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import Navbar from '../components/Navbar';
-import { getConfig } from '../lib/api';
+import './Case.css';
 
-// ── Design tokens (espelha o Painel) ──────────────────────────────────────────
-const T = {
-  bg:       '#0f1923',
-  bg2:      '#111d28',
-  bg3:      '#162130',
-  border:   '#1e3040',
-  text:     '#f5f5f7',
-  muted:    '#8a9bb0',
-  accent:   '#d0ff00',
-  accentDk: '#a8cc00',
-  danger:   '#ff4d4d',
-  fontHead: "'Space Grotesk', sans-serif",
-  fontBody: "'Inter', -apple-system, sans-serif",
-};
-
-// ── Site fallback (mesma logo/nome da Home, caso a config ainda não tenha vindo) ──
-const SITE_FALLBACK = {
-  nome: 'Creapes',
-  logo: 'https://res.cloudinary.com/dhu1cqvrb/image/upload/v1781788827/creapeslogo_jajjgt.png',
-};
-
-/** Converte URL do Vimeo normal para player embed (igual Home.jsx) */
-function buildVimeoEmbedUrl(url) {
-  if (!url) return null;
-  if (url.includes('player.vimeo.com')) return url;
-  const clean = url.split('?')[0].replace(/\/$/, '');
-  const parts = clean.split('/');
-  if (parts.length >= 5) return `https://player.vimeo.com/video/${parts[3]}?h=${parts[4]}`;
-  if (parts.length === 4) return `https://player.vimeo.com/video/${parts[3]}`;
-  return null;
-}
-
-// ── Utilitários ───────────────────────────────────────────────────────────────
-
-/** Gera slug a partir de uma string qualquer */
 function toSlug(str = '') {
   return str
     .toLowerCase()
@@ -46,206 +10,157 @@ function toSlug(str = '') {
     .replace(/[^a-z0-9-]/g, '');
 }
 
-/** Lê o slug do pathname: /cases/:slug → slug */
 function slugFromPath() {
   const parts = window.location.pathname.split('/').filter(Boolean);
-  // suporta /cases/meu-case  ou  /case/meu-case  ou último segmento
   const idx = parts.findIndex(p => p === 'cases' || p === 'case');
   if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
   return parts[parts.length - 1] || '';
 }
 
-// ── Componentes auxiliares ────────────────────────────────────────────────────
-
-function Spinner() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '80px 0', color: T.muted, fontFamily: T.fontBody, fontSize: 15 }}>
-      <svg width="20" height="20" viewBox="0 0 24 24" style={{ animation: 'spin 0.9s linear infinite', flexShrink: 0 }}>
-        <circle cx="12" cy="12" r="10" fill="none" stroke={T.accent} strokeWidth="3" strokeDasharray="40 20" />
-      </svg>
-      Carregando case…
-    </div>
-  );
-}
-
-function NotFound() {
-  return (
-    <div style={{ textAlign: 'center', padding: '100px 24px', color: T.muted, fontFamily: T.fontBody }}>
-      <div style={{ fontSize: 64, marginBottom: 16, opacity: 0.3 }}>⬡</div>
-      <p style={{ fontFamily: T.fontHead, fontSize: 22, fontWeight: 700, color: T.text, marginBottom: 8 }}>Case não encontrado</p>
-      <p style={{ fontSize: 14, marginBottom: 32 }}>O projeto que você buscou não existe ou foi removido.</p>
-      <a href="/" style={{ color: T.accent, fontWeight: 700, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none', fontFamily: T.fontHead }}>
-        ← Voltar ao início
-      </a>
-    </div>
-  );
-}
-
-function Badge({ children }) {
-  return (
-    <span style={{
-      display: 'inline-block',
-      background: `${T.accent}18`,
-      color: T.accent,
-      border: `1px solid ${T.accent}40`,
-      borderRadius: 20,
-      padding: '3px 12px',
-      fontSize: 11,
-      fontWeight: 700,
-      letterSpacing: '0.06em',
-      fontFamily: T.fontHead,
-      textTransform: 'uppercase',
-    }}>
-      {children}
-    </span>
-  );
-}
-
-function MetaItem({ label, value }) {
-  if (!value) return null;
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.muted, fontFamily: T.fontHead }}>
-        {label}
-      </span>
-      <span style={{ fontSize: 14, fontWeight: 600, color: T.text, fontFamily: T.fontBody }}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function Divider() {
-  return <div style={{ borderTop: `1px solid ${T.border}`, margin: '36px 0' }} />;
-}
-
-// ── Componente principal ──────────────────────────────────────────────────────
-
 export default function Case() {
-  const [caseData, setCaseData] = useState(null);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(false);
-  const [videoOpen, setVideoOpen] = useState(false);
-  const [site, setSite] = useState(SITE_FALLBACK);
-  const [heroVisible, setHeroVisible] = useState(false);
-  const heroMediaRef = useRef(null);
+  const [caseData, setCaseData]   = useState(null);
+  const [loading,  setLoading]    = useState(true);
+  const [error,    setError]      = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const cursorBallRef = useRef(null);
+  const cursorRingRef = useRef(null);
 
-  // ── Busca logo/nome do site (mesma config usada na Home) ──
+  // ── Cursor customizado ──────────────────────────────────────────────────────
   useEffect(() => {
-    getConfig()
-      .then((config) => {
-        if (!config) return;
-        setSite({
-          nome: config.sobre_titulo || SITE_FALLBACK.nome,
-          logo: config.logo_url || config.logo || SITE_FALLBACK.logo,
-        });
-      })
-      .catch(() => {});
+    const ball = cursorBallRef.current;
+    const ring = cursorRingRef.current;
+    if (!ball || !ring) return;
+
+    let rx = 0, ry = 0;
+    function onMove(e) {
+      ball.style.left = e.clientX + 'px';
+      ball.style.top  = e.clientY + 'px';
+    }
+    function lerp() {
+      rx += (parseFloat(ball.style.left || 0) - rx) * 0.12;
+      ry += (parseFloat(ball.style.top  || 0) - ry) * 0.12;
+      ring.style.left = rx + 'px';
+      ring.style.top  = ry + 'px';
+      requestAnimationFrame(lerp);
+    }
+    window.addEventListener('mousemove', onMove);
+    lerp();
+
+    function onEnter() { document.body.classList.add('cursor-hover'); }
+    function onLeave() { document.body.classList.remove('cursor-hover'); }
+    document.querySelectorAll('a,button').forEach(el => {
+      el.addEventListener('mouseenter', onEnter);
+      el.addEventListener('mouseleave', onLeave);
+    });
+
+    return () => window.removeEventListener('mousemove', onMove);
+  }, [caseData]);
+
+  // ── Fechar modal com Escape ─────────────────────────────────────────────────
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') setModalOpen(false); }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // ── Animações de entrada (nav, hero) ────────────────────────────────────────
+  useEffect(() => {
+    if (!caseData) return;
+    requestAnimationFrame(() => {
+      // nav
+      document.querySelectorAll('.nav-back,.nav-brand,.nav-cta').forEach((el, i) => {
+        setTimeout(() => {
+          el.style.opacity = '1';
+          el.style.transform = 'none';
+        }, 100 + i * 80);
+      });
+      // hero title
+      const inner = document.querySelector('.hero-title-inner');
+      if (inner) setTimeout(() => { inner.style.transform = 'translateY(0)'; inner.style.transition = 'transform 1s cubic-bezier(0.16,1,0.3,1)'; }, 200);
+      // hero meta
+      document.querySelectorAll('.hero-tag,.hero-category').forEach((el, i) => {
+        setTimeout(() => { el.style.opacity = '1'; el.style.transform = 'none'; el.style.transition = 'opacity .6s, transform .6s'; }, 400 + i * 100);
+      });
+      // hero play
+      const play = document.querySelector('.hero-play');
+      if (play) setTimeout(() => { play.style.opacity = '1'; play.style.transition = 'opacity .6s .5s, border-color .3s, background .3s, transform .4s cubic-bezier(0.16,1,0.3,1)'; }, 500);
+      // scroll hint
+      const hint = document.querySelector('.hero-scroll-hint');
+      if (hint) setTimeout(() => { hint.style.opacity = '1'; hint.style.transition = 'opacity .6s'; }, 900);
+      // counter items
+      document.querySelectorAll('.counter-item').forEach((el, i) => {
+        setTimeout(() => { el.style.opacity = '1'; el.style.transform = 'none'; el.style.transition = 'opacity .6s, transform .6s'; }, 600 + i * 100);
+      });
+      // detail rows
+      document.querySelectorAll('.detail-row').forEach((el, i) => {
+        setTimeout(() => { el.style.opacity = '1'; el.style.transform = 'none'; el.style.transition = 'opacity .5s, transform .5s'; }, 800 + i * 80);
+      });
+      // divider
+      const div = document.querySelector('.divider');
+      if (div) setTimeout(() => { div.style.transform = 'scaleX(1)'; div.style.transition = 'transform .8s cubic-bezier(0.16,1,0.3,1)'; }, 500);
+    });
+  }, [caseData]);
+
+  // ── Fetch ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     const slug = slugFromPath();
-
     async function fetchCase() {
       try {
-        setLoading(true);
         const res = await fetch('/api/cases');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const cases = await res.json();
-
-        // filtra pelo slug derivado do nome (campo `nome`) ou link_projeto
-        const found = cases.find(c => toSlug(c.nome) === slug);
+        const matches = cases.filter(c => toSlug(c.nome) === slug);
+        const score = c => (c.descricao ? 2 : 0) + (c.link_projeto || c.link ? 2 : 0) + (c.resumo ? 1 : 0) + (c.imagem ? 1 : 0);
+        const found = matches.sort((a, b) => score(b) - score(a))[0] || null;
         if (!found) { setError(true); return; }
+        // normaliza campo link
+        found.link_projeto = found.link_projeto || found.link || null;
         setCaseData(found);
       } catch (err) {
-        console.error('[Case] Erro ao buscar cases:', err);
+        console.error('[Case]', err);
         setError(true);
       } finally {
         setLoading(false);
       }
     }
-
     fetchCase();
   }, []);
 
-  // ── Keyframes globais ──
+  // ── Próximo case ────────────────────────────────────────────────────────────
+  const [nextCase, setNextCase] = useState(null);
   useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
-      @keyframes spin    { to { transform: rotate(360deg); } }
-      @keyframes fadeUp  { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-      @keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:.5; } }
-      .case-hero-img     { transition: transform 0.6s ease; }
-      .case-hero-img:hover { transform: scale(1.015); }
-      .case-back-link    { color: ${T.muted}; text-decoration: none; font-size: 13px; font-weight: 600;
-                           font-family: ${T.fontHead}; letter-spacing: 0.05em; text-transform: uppercase;
-                           display: inline-flex; align-items: center; gap: 6px; transition: color 0.2s; }
-      .case-back-link:hover { color: ${T.accent}; }
-      .case-cta-btn      { display: inline-flex; align-items: center; gap: 8px;
-                           background: ${T.accent}; color: ${T.bg};
-                           border: none; border-radius: 8px; padding: 13px 28px;
-                           font-family: ${T.fontHead}; font-weight: 700; font-size: 13px;
-                           cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;
-                           text-decoration: none; transition: background 0.2s, transform 0.15s; }
-      .case-cta-btn:hover { background: ${T.accentDk}; transform: translateY(-1px); }
-      .case-video-btn    { display: inline-flex; align-items: center; gap: 8px;
-                           background: transparent; color: ${T.text};
-                           border: 1px solid ${T.border}; border-radius: 8px; padding: 12px 24px;
-                           font-family: ${T.fontBody}; font-weight: 600; font-size: 13px;
-                           cursor: pointer; transition: border-color 0.2s, color 0.2s; }
-      .case-video-btn:hover { border-color: ${T.accent}; color: ${T.accent}; }
-      .overlay-backdrop  { position: fixed; inset: 0; background: rgba(0,0,0,0.92);
-                           backdrop-filter: blur(6px); z-index: 9000;
-                           display: flex; align-items: center; justify-content: center; padding: 24px; }
-      .overlay-close     { position: absolute; top: 20px; right: 20px;
-                           background: none; border: none; color: ${T.muted}; font-size: 28px;
-                           cursor: pointer; line-height: 1; transition: color 0.2s; }
-      .overlay-close:hover { color: ${T.text}; }
-      ::-webkit-scrollbar { width: 6px; background: ${T.bg}; }
-      ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 3px; }
-    `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
-
-  // ── Carrega o vídeo de fundo só quando a seção do hero entra na viewport ──
-  useEffect(() => {
-    const el = heroMediaRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setHeroVisible(true);
-            observer.disconnect();
-          }
-        });
-      },
-      { root: null, rootMargin: '200px', threshold: 0.1 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
+    if (!caseData) return;
+    fetch('/api/cases')
+      .then(r => r.json())
+      .then(all => {
+        const idx = all.findIndex(c => c.id === caseData.id);
+        const next = all[(idx + 1) % all.length];
+        if (next && next.id !== caseData.id) setNextCase(next);
+      })
+      .catch(() => {});
   }, [caseData]);
 
-  // ── Fechar modal com Escape ──
-  useEffect(() => {
-    function onKey(e) { if (e.key === 'Escape') setVideoOpen(false); }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  // ── Cursor SVG ──────────────────────────────────────────────────────────────
+  const cursorEl = (
+    <>
+      <div id="cursor">
+        <div className="cursor-ball" ref={cursorBallRef} style={{ position: 'fixed', top: 0, left: 0 }} />
+      </div>
+      <div className="cursor-ring" ref={cursorRingRef} style={{ position: 'fixed', top: 0, left: 0 }} />
+    </>
+  );
 
-  // ── Layout base ──
-  const page = (children) => (
-    <div style={{ background: T.bg, minHeight: '100vh', fontFamily: T.fontBody, color: T.text }}>
-      {children}
+  if (loading) return (
+    <div className="not-found">
+      <p>Carregando…</p>
     </div>
   );
 
-  if (loading) return page(<Spinner />);
-  if (error || !caseData) return page(<NotFound />);
+  if (error || !caseData) return (
+    <div className="not-found">
+      <p>CASE NÃO ENCONTRADO.</p>
+    </div>
+  );
 
   const {
     nome, descricao, resumo, categoria_nome,
@@ -253,310 +168,272 @@ export default function Case() {
     ficha_tecnica, diretor, dop, ano,
   } = caseData;
 
-  // Ficha técnica: pode ser JSON array ou string separada por \n
+  // Ficha técnica
   let fichaTecnicaItems = [];
   if (ficha_tecnica) {
     try {
-      const parsed = JSON.parse(ficha_tecnica);
-      fichaTecnicaItems = Array.isArray(parsed) ? parsed : [ficha_tecnica];
+      const p = JSON.parse(ficha_tecnica);
+      fichaTecnicaItems = Array.isArray(p) ? p : [ficha_tecnica];
     } catch {
       fichaTecnicaItems = ficha_tecnica.split('\n').filter(Boolean);
     }
   }
 
-  const hasMeta     = diretor || dop || ano || categoria_nome;
-  const hasVideo    = Boolean(link_projeto);
-  const hasDepo     = Boolean(depoimento);
-  const hasFicha    = fichaTecnicaItems.length > 0;
+  const hasVideo = Boolean(link_projeto);
+  const hasDepo  = Boolean(depoimento);
+  const hasFicha = fichaTecnicaItems.length > 0;
+  const hasMeta  = diretor || dop || ano || categoria_nome;
 
-  const isVimeo  = hasVideo && link_projeto.includes('vimeo');
-  const bgVideo  = isVimeo ? (buildVimeoEmbedUrl(link_projeto) || link_projeto) : link_projeto;
+  // Embed Vimeo
+  let embedUrl = link_projeto || '';
+  if (embedUrl.includes('vimeo.com') && !embedUrl.includes('player.vimeo')) {
+    const m = embedUrl.match(/vimeo\.com\/(\d+)/);
+    const hash = embedUrl.split('/').pop();
+    if (m) embedUrl = `https://player.vimeo.com/video/${m[1]}${hash && hash !== m[1] ? '?h=' + hash : ''}?autoplay=1&title=0&byline=0&portrait=0`;
+  }
 
-  return page(
+  return (
     <>
-      {/* ── Modal de vídeo ─────────────────────────────────────────────────── */}
-      {videoOpen && hasVideo && (
-        <div className="overlay-backdrop" onClick={() => setVideoOpen(false)}>
-          <button className="overlay-close" onClick={() => setVideoOpen(false)} aria-label="Fechar vídeo">×</button>
-          <div
-            style={{ position: 'relative', width: '100%', maxWidth: 960, aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden' }}
-            onClick={e => e.stopPropagation()}
+      {cursorEl}
+
+      {/* ── NAV ── */}
+      <nav className="case-nav">
+        <a href="/" className="nav-back">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Voltar
+        </a>
+        <a href="/" className="nav-brand">Creapes</a>
+        <a href="/#contato" className="nav-cta">Fale conosco</a>
+      </nav>
+
+      {/* ── HERO ── */}
+      <section className="case-hero">
+        <div className="hero-media">
+          {imagem
+            ? <img src={imagem} alt={nome} />
+            : <div style={{ background: '#0a0a0a', width: '100%', height: '100%' }} />
+          }
+        </div>
+        <div className="hero-overlay" />
+        <div className="hero-grain" />
+
+        {hasVideo && (
+          <button
+            className="hero-play"
+            onClick={() => setModalOpen(true)}
+            aria-label="Reproduzir vídeo"
+            onMouseEnter={() => document.body.classList.add('cursor-video')}
+            onMouseLeave={() => document.body.classList.remove('cursor-video')}
           >
-            <iframe
-              src={link_projeto}
-              title={nome}
-              frameBorder="0"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
-              style={{ width: '100%', height: '100%', border: 'none' }}
-            />
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+        )}
+
+        <div className="hero-content">
+          <div style={{ flex: 1 }}>
+            <h1 className="hero-title">
+              <span className="hero-title-inner">{nome}</span>
+            </h1>
+          </div>
+          <div className="hero-meta">
+            {categoria_nome && <span className="hero-tag">{categoria_nome}</span>}
+            {ano && <span className="hero-category">{ano}</span>}
+          </div>
+        </div>
+
+        <div className="hero-scroll-hint">
+          <span>Scroll</span>
+          <div className="scroll-line" />
+        </div>
+      </section>
+
+      {/* ── COUNTER BAR ── */}
+      {(diretor || dop || ano || categoria_nome) && (
+        <div className="counter-bar">
+          {diretor && (
+            <div className="counter-item">
+              <div className="counter-label">Direção</div>
+              <div className="counter-value">{diretor}</div>
+            </div>
+          )}
+          {dop && (
+            <div className="counter-item">
+              <div className="counter-label">D.O.P.</div>
+              <div className="counter-value">{dop}</div>
+            </div>
+          )}
+          {ano && (
+            <div className="counter-item">
+              <div className="counter-label">Ano</div>
+              <div className="counter-value">{ano}</div>
+            </div>
+          )}
+          {categoria_nome && (
+            <div className="counter-item">
+              <div className="counter-label">Categoria</div>
+              <div className="counter-value" style={{ fontSize: 'clamp(1rem, 2vw, 1.6rem)' }}>{categoria_nome}</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── BRIEF ── */}
+      {(descricao || resumo) && (
+        <section className="section">
+          <div className="section-label">Sobre o projeto</div>
+          <div className="brief-section">
+            {descricao && (
+              <h2 className="brief-headline">
+                {descricao}
+              </h2>
+            )}
+            {resumo && (
+              <div className="brief-right">
+                <p className="brief-body">{resumo}</p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── DIVIDER ── */}
+      <div className="divider" />
+
+      {/* ── FULL VIDEO ── */}
+      {hasVideo && (
+        <section className="full-video-section">
+          <div
+            className="full-video-wrapper"
+            onClick={() => setModalOpen(true)}
+            onMouseEnter={() => document.body.classList.add('cursor-video')}
+            onMouseLeave={() => document.body.classList.remove('cursor-video')}
+          >
+            {imagem
+              ? <img src={imagem} alt={nome} />
+              : <div style={{ background: '#111', width: '100%', height: '100%' }} />
+            }
+            <div className="full-video-overlay">
+              <button className="full-video-play" aria-label="Play">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── MARQUEE ── */}
+      {nome && (
+        <div className="marquee-section">
+          <div className="marquee-track">
+            {[...Array(6)].map((_, i) => (
+              <span key={i} className={`marquee-item${i % 2 === 0 ? ' filled' : ''}`}>
+                {nome} <span className="dot">✦</span>
+              </span>
+            ))}
           </div>
         </div>
       )}
 
-      <Navbar brandName={site.nome} brandLogo={site.logo} />
+      {/* ── DEPOIMENTO ── */}
+      {hasDepo && (
+        <section className="section quote-section">
+          <div className="quote-bg">"</div>
+          <div className="quote-mark">"</div>
+          <blockquote className="quote-text">{depoimento}</blockquote>
+          {nome && <p className="quote-author">— {nome}</p>}
+        </section>
+      )}
 
-      {/* ── Topo / breadcrumb ───────────────────────────────────────────────── */}
-      <div style={{ padding: '110px 24px 0', maxWidth: 1100, margin: '0 auto' }}>
-        <a href="/" className="case-back-link">
-          <span style={{ fontSize: 16, lineHeight: 1 }}>←</span> Todos os projetos
-        </a>
-      </div>
-
-      {/* ── Hero ────────────────────────────────────────────────────────────── */}
-      <header style={{ maxWidth: 1100, margin: '0 auto', padding: '36px 24px 0', animation: 'fadeUp 0.5s ease both' }}>
-
-        {/* Eyebrow */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-          {categoria_nome && <Badge>{categoria_nome}</Badge>}
-          {ano && <span style={{ fontSize: 12, color: T.muted, fontFamily: T.fontHead, letterSpacing: '0.06em' }}>{ano}</span>}
-        </div>
-
-        {/* Título */}
-        <h1 style={{
-          fontFamily: T.fontHead,
-          fontSize: 'clamp(32px, 6vw, 64px)',
-          fontWeight: 700,
-          lineHeight: 1.08,
-          letterSpacing: '-0.03em',
-          color: T.text,
-          margin: '0 0 16px',
-          maxWidth: 800,
-        }}>
-          {nome}
-        </h1>
-
-        {/* Subtítulo / descricao */}
-        {descricao && (
-          <p style={{
-            fontFamily: T.fontBody,
-            fontSize: 'clamp(15px, 2vw, 18px)',
-            color: T.muted,
-            lineHeight: 1.6,
-            maxWidth: 640,
-            margin: '0 0 32px',
-          }}>
-            {descricao}
-          </p>
-        )}
-
-        {/* CTAs */}
-        {hasVideo && (
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 40 }}>
-            <button className="case-cta-btn" onClick={() => setVideoOpen(true)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              Assistir projeto
-            </button>
-          </div>
-        )}
-
-        {/* Imagem hero + vídeo de fundo autoplay (carrega só quando entra na tela) */}
-        {imagem && (
-          <div
-            ref={heroMediaRef}
-            style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${T.border}`, position: 'relative', aspectRatio: '16/9', background: T.bg2 }}
-          >
-            {/* Imagem sempre presente como poster/fallback enquanto o vídeo não monta */}
-            <img
-              src={imagem}
-              alt={nome}
-              className="case-hero-img"
-              style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
-            />
-
-            {/* Vídeo de fundo: só monta quando a seção entra na viewport, igual ao Hero da Home */}
-            {heroVisible && hasVideo && isVimeo && (
-              <iframe
-                title={`bg-${nome}`}
-                src={`${bgVideo}${bgVideo.includes('?') ? '&' : '?'}background=1&autoplay=1&loop=1&muted=1&autopause=0`}
-                style={{
-                  position: 'absolute', inset: 0,
-                  width: '100%', height: '100%',
-                  border: 'none', pointerEvents: 'none',
-                }}
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
-              />
-            )}
-
-            {heroVisible && hasVideo && !isVimeo && (link_projeto.includes('.mp4') || link_projeto.startsWith('blob:') || link_projeto.startsWith('http')) && (
-              <video
-                src={bgVideo}
-                autoPlay
-                loop
-                muted
-                playsInline
-                style={{
-                  position: 'absolute', inset: 0,
-                  width: '100%', height: '100%',
-                  objectFit: 'cover', pointerEvents: 'none',
-                }}
-              />
-            )}
-
-            {/* Botão pra abrir o modal com som, sobreposto ao vídeo mudo de fundo */}
-            {hasVideo && (
-              <button
-                onClick={() => setVideoOpen(true)}
-                aria-label="Assistir com som"
-                style={{
-                  position: 'absolute', inset: 0, width: '100%', height: '100%',
-                  background: 'transparent', border: 'none', cursor: 'pointer', zIndex: 2,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >
-                <div style={{
-                  width: 72, height: 72, borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.55)', border: `2px solid ${T.accent}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  backdropFilter: 'blur(4px)', transition: 'transform 0.2s',
-                }}>
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill={T.accent} style={{ marginLeft: 3 }}>
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
-                </div>
-              </button>
-            )}
-          </div>
-        )}
-      </header>
-
-      {/* ── Corpo ────────────────────────────────────────────────────────────── */}
-      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 24px 80px', animation: 'fadeUp 0.6s 0.1s ease both', opacity: 0, animationFillMode: 'forwards' }}>
-
-        {/* Grade: Resumo + Ficha Técnica */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: hasFicha || hasMeta ? '1fr 320px' : '1fr',
-          gap: 48,
-          alignItems: 'start',
-        }}>
-
-          {/* Coluna esquerda: resumo + depoimento */}
-          <div>
+      {/* ── DETAILS / FICHA TÉCNICA ── */}
+      {(resumo || hasFicha) && (
+        <section className="section">
+          <div className="section-label">Ficha técnica</div>
+          <div className="details-section">
             {resumo && (
-              <section>
-                <h2 style={{ fontFamily: T.fontHead, fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.accent, marginBottom: 16 }}>
-                  Sobre o projeto
-                </h2>
-                <p style={{ fontFamily: T.fontBody, fontSize: 16, lineHeight: 1.75, color: T.text, margin: 0, whiteSpace: 'pre-line' }}>
-                  {resumo}
-                </p>
-              </section>
+              <div>
+                <h3 className="details-title">O projeto</h3>
+                <p className="details-desc">{resumo}</p>
+              </div>
             )}
-
-            {hasDepo && (
-              <>
-                <Divider />
-                <section>
-                  <h2 style={{ fontFamily: T.fontHead, fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.accent, marginBottom: 20 }}>
-                    Depoimento
-                  </h2>
-                  <blockquote style={{
-                    margin: 0,
-                    padding: '20px 24px',
-                    background: T.bg2,
-                    border: `1px solid ${T.border}`,
-                    borderLeft: `3px solid ${T.accent}`,
-                    borderRadius: '0 10px 10px 0',
-                  }}>
-                    <p style={{ fontFamily: T.fontBody, fontSize: 15, lineHeight: 1.7, color: T.text, margin: 0, fontStyle: 'italic' }}>
-                      "{depoimento}"
-                    </p>
-                  </blockquote>
-                </section>
-              </>
+            {hasFicha && (
+              <table className="details-table">
+                <tbody>
+                  {fichaTecnicaItems.map((item, i) => {
+                    const [label, ...rest] = item.split(':');
+                    const value = rest.join(':').trim();
+                    return (
+                      <tr key={i} className="detail-row">
+                        <td>{value ? label.trim() : `Item ${i + 1}`}</td>
+                        <td>{value || label.trim()}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
+        </section>
+      )}
 
-          {/* Coluna direita: meta + ficha técnica */}
-          {(hasMeta || hasFicha) && (
-            <aside style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-
-              {/* Meta */}
-              {hasMeta && (
-                <div style={{
-                  background: T.bg2,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 12,
-                  padding: '24px 20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 18,
-                }}>
-                  <MetaItem label="Direção"  value={diretor} />
-                  <MetaItem label="D.O.P."   value={dop} />
-                  <MetaItem label="Ano"      value={ano} />
-                  <MetaItem label="Categoria" value={categoria_nome} />
-                </div>
-              )}
-
-              {/* Ficha técnica */}
-              {hasFicha && (
-                <div style={{
-                  background: T.bg2,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 12,
-                  padding: '24px 20px',
-                }}>
-                  <h3 style={{
-                    fontFamily: T.fontHead,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                    color: T.accent,
-                    marginTop: 0,
-                    marginBottom: 16,
-                  }}>
-                    Ficha Técnica
-                  </h3>
-                  <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {fichaTecnicaItems.map((item, i) => (
-                      <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: T.text, fontFamily: T.fontBody, lineHeight: 1.5 }}>
-                        <span style={{ color: T.accent, marginTop: 2, flexShrink: 0 }}>·</span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Link externo (fallback se não for Vimeo embed) */}
-              {hasVideo && !link_projeto.startsWith('https://player.vimeo') && !link_projeto.includes('.mp4') && (
-                <a
-                  href={link_projeto}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="case-cta-btn"
-                  style={{ justifyContent: 'center' }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  Ver projeto completo
-                </a>
-              )}
-            </aside>
-          )}
-        </div>
-
-        {/* ── Rodapé: botão de voltar ── */}
-        <Divider />
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <a href="/" className="case-back-link">
-            <span style={{ fontSize: 16 }}>←</span> Ver todos os projetos
+      {/* ── CTA ── */}
+      <section className="cta-section">
+        <div className="cta-glow" />
+        <p className="cta-eyebrow">Vamos criar juntos</p>
+        <h2 className="cta-headline">Próximo<br />projeto<br /><em style={{ fontStyle: 'normal', color: 'var(--accent)' }}>é o seu</em></h2>
+        <div className="cta-btns">
+          <a href="/#contato" className="btn-primary">
+            <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.28h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.85a16 16 0 0 0 6 6l1.27-.51a2 2 0 0 1 2.11.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            Fale conosco
+          </a>
+          <a href="/" className="btn-secondary">
+            <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            Ver portfólio
           </a>
         </div>
+      </section>
 
-      </main>
+      {/* ── NEXT PROJECT ── */}
+      {nextCase && (
+        <div className="next-section">
+          {nextCase.imagem && (
+            <div className="next-bg" style={{ backgroundImage: `url(${nextCase.imagem})` }} />
+          )}
+          <a href={`/case/${toSlug(nextCase.nome)}`} className="next-inner">
+            <div>
+              <p className="next-label">Próximo projeto</p>
+              <p className="next-title">{nextCase.nome}</p>
+            </div>
+            <div className="next-arrow">
+              <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          </a>
+        </div>
+      )}
 
-      {/* ── Responsividade mínima via media query inline ── */}
-      <style>{`
-        @media (max-width: 700px) {
-          main > div[style*="grid-template-columns"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
+      {/* ── FOOTER ── */}
+      <footer className="case-footer">
+        <span className="footer-copy">© {new Date().getFullYear()} Creapes</span>
+        <button className="footer-back-top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+          Topo
+        </button>
+      </footer>
+
+      {/* ── MODAL DE VÍDEO ── */}
+      <div className={`video-modal${modalOpen ? ' active' : ''}`}>
+        <button className="modal-close" onClick={() => setModalOpen(false)}>×</button>
+        <div className="modal-iframe-wrap">
+          {modalOpen && hasVideo && (
+            <iframe
+              src={embedUrl}
+              title={nome}
+              frameBorder="0"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+            />
+          )}
+        </div>
+      </div>
     </>
   );
 }
