@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import CreapesParticles3D from './CreapesParticles3D';
 
 // Props:
 // nome: string — nome da empresa (ex: "Creapes")
@@ -7,6 +8,8 @@ import { useState } from 'react';
 // vimeoUrl: string
 // linkedinUrl: string
 // onSubmit: async function(formData) → void  — handler de envio (conectar ao backend depois)
+
+const CAMPOS_OBRIGATORIOS = ['nome', 'whatsapp', 'mensagem'];
 
 export default function Footer({
   nome = 'Creapes',
@@ -18,12 +21,16 @@ export default function Footer({
 }) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [activeField, setActiveField] = useState(null);
   const [form, setForm] = useState({
     nome: '',
     whatsapp: '',
     email: '',
     mensagem: '',
   });
+
+  const preenchidos = CAMPOS_OBRIGATORIOS.filter((k) => form[k].trim().length > 0).length;
+  const progresso = Math.round((preenchidos / CAMPOS_OBRIGATORIOS.length) * 100);
 
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -59,12 +66,23 @@ export default function Footer({
 
         {/* ── Bloco Formulário ── */}
         <div className="footer-block">
-          <h2>Start a Project</h2>
+          <div className="cf-header">
+            <h2>Start a Project</h2>
+            {!submitted && (
+              <div className="cf-progress" aria-hidden="true">
+                <span className="cf-progress-label">Briefing</span>
+                <div className="cf-progress-track">
+                  <div className="cf-progress-fill" style={{ width: `${progresso}%` }} />
+                </div>
+                <span className="cf-progress-count">{preenchidos}/{CAMPOS_OBRIGATORIOS.length}</span>
+              </div>
+            )}
+          </div>
 
           {!submitted ? (
             <form className="cf-form" onSubmit={handleSubmit}>
               <div className="cf-row">
-                <div className="cf-field">
+                <div className={`cf-field ${activeField === 'nome' ? 'is-active' : ''} ${form.nome ? 'is-filled' : ''}`}>
                   <span className="cf-number">01</span>
                   <div className="cf-input-wrap">
                     <label className="cf-label">Seu Nome</label>
@@ -77,10 +95,12 @@ export default function Footer({
                       autoComplete="off"
                       value={form.nome}
                       onChange={handleChange}
+                      onFocus={() => setActiveField('nome')}
+                      onBlur={() => setActiveField(null)}
                     />
                   </div>
                 </div>
-                <div className="cf-field">
+                <div className={`cf-field ${activeField === 'whatsapp' ? 'is-active' : ''} ${form.whatsapp ? 'is-filled' : ''}`}>
                   <span className="cf-number">02</span>
                   <div className="cf-input-wrap">
                     <label className="cf-label">WhatsApp</label>
@@ -93,12 +113,14 @@ export default function Footer({
                       autoComplete="off"
                       value={form.whatsapp}
                       onChange={handleChange}
+                      onFocus={() => setActiveField('whatsapp')}
+                      onBlur={() => setActiveField(null)}
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="cf-field">
+              <div className={`cf-field ${activeField === 'email' ? 'is-active' : ''} ${form.email ? 'is-filled' : ''}`}>
                 <span className="cf-number">03</span>
                 <div className="cf-input-wrap">
                   <label className="cf-label">E-mail</label>
@@ -110,11 +132,13 @@ export default function Footer({
                     autoComplete="off"
                     value={form.email}
                     onChange={handleChange}
+                    onFocus={() => setActiveField('email')}
+                    onBlur={() => setActiveField(null)}
                   />
                 </div>
               </div>
 
-              <div className="cf-field">
+              <div className={`cf-field ${activeField === 'mensagem' ? 'is-active' : ''} ${form.mensagem ? 'is-filled' : ''}`}>
                 <span className="cf-number">04</span>
                 <div className="cf-input-wrap">
                   <label className="cf-label">Sobre o Projeto</label>
@@ -125,6 +149,8 @@ export default function Footer({
                     rows="3"
                     value={form.mensagem}
                     onChange={handleChange}
+                    onFocus={() => setActiveField('mensagem')}
+                    onBlur={() => setActiveField(null)}
                   />
                 </div>
               </div>
@@ -139,7 +165,7 @@ export default function Footer({
                   disabled={loading}
                   style={{ opacity: loading ? 0.5 : 1, pointerEvents: loading ? 'none' : 'auto' }}
                 >
-                  Enviar Briefing
+                  {loading ? 'Enviando…' : 'Enviar Briefing'}
                   <div className="cf-submit-circle">
                     <svg viewBox="0 0 24 24">
                       <line x1="5" y1="12" x2="19" y2="12" />
@@ -181,30 +207,36 @@ export default function Footer({
         </div>
       </div>
 
+      <div className="footer-signature fade-in">
+        <CreapesParticles3D texto={nome.toUpperCase()} height={220} />
+      </div>
+
       <div className="footer-bottom fade-in">
         <div className="copyright">
           &copy; {new Date().getFullYear()} {nome}. All rights reserved.
         </div>
-        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}>
-          Desenvolvido por{' '}
+        <div className="dev-badge">
           <a
             href="https://www.leanttro.com"
             target="_blank"
             rel="noreferrer"
-            style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}
+            className="dev-badge-link"
           >
-            Leanttro Tecnologia
+            <span className="dev-badge-dot" />
+            Desenvolvido por <strong>Leanttro Tecnologia</strong>
           </a>
-          {' · '}
           <a
             href="https://wa.me/5511913324827"
             target="_blank"
             rel="noreferrer"
-            style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}
+            className="dev-badge-wpp"
+            aria-label="Falar com a Leanttro no WhatsApp"
           >
-            WhatsApp
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm5.78 14.04c-.24.68-1.39 1.3-1.91 1.36-.49.06-1.1.08-1.78-.11-.41-.12-.94-.29-1.62-.57-2.85-1.23-4.71-4.1-4.85-4.29-.14-.19-1.16-1.54-1.16-2.94s.73-2.09.99-2.37c.26-.29.56-.36.75-.36.19 0 .38 0 .54.01.17.01.41-.07.64.49.24.57.81 1.97.88 2.11.07.14.12.31.02.5-.1.19-.15.31-.29.48-.14.17-.3.37-.43.5-.14.14-.29.29-.12.57.17.29.75 1.24 1.61 2.01 1.11.99 2.04 1.3 2.33 1.45.29.14.46.12.63-.07.17-.19.72-.84.91-1.13.19-.29.38-.24.64-.14.26.1 1.65.78 1.94.92.29.14.48.21.55.33.07.12.07.69-.17 1.37z"/>
+            </svg>
           </a>
-        </p>
+        </div>
         <div className="social-links">
           {instagramUrl && (
             <a href={instagramUrl} target="_blank" rel="noreferrer">Instagram</a>
@@ -232,7 +264,46 @@ export default function Footer({
         }
         .footer-block h2 {
           font-size: 2rem;
-          margin-bottom: 2rem;
+        }
+        .cf-header {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 1.5rem;
+          margin-bottom: 2.6rem;
+          flex-wrap: wrap;
+        }
+        .cf-progress {
+          display: flex;
+          align-items: center;
+          gap: .7rem;
+        }
+        .cf-progress-label {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: .62rem;
+          text-transform: uppercase;
+          letter-spacing: .2em;
+          color: rgba(240,240,240,0.35);
+        }
+        .cf-progress-track {
+          width: 64px;
+          height: 3px;
+          border-radius: 100px;
+          background: rgba(240,240,240,0.1);
+          overflow: hidden;
+        }
+        .cf-progress-fill {
+          height: 100%;
+          background: var(--accent);
+          box-shadow: 0 0 10px rgba(208,255,0,.6);
+          transition: width 0.5s var(--ease);
+        }
+        .cf-progress-count {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: .72rem;
+          font-weight: 700;
+          color: var(--accent);
+          min-width: 26px;
         }
         .cf-form {
           display: flex;
@@ -243,50 +314,62 @@ export default function Footer({
           display: flex;
           gap: 1.5rem;
           align-items: flex-start;
-          padding: 1.4rem 0;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
+          padding: 1.5rem 1rem;
+          margin: 0 -1rem;
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+          border-radius: 6px;
           position: relative;
-          transition: border-color 0.4s;
+          transition: border-color 0.4s, background 0.4s, box-shadow 0.4s;
         }
-        .cf-field:focus-within { border-color: var(--accent); }
+        .cf-field.is-active {
+          border-color: rgba(208,255,0,.5);
+          background: rgba(208,255,0,0.035);
+          box-shadow: inset 0 1px 0 rgba(208,255,0,.08);
+        }
         .cf-number {
           font-family: 'Space Grotesk', sans-serif;
           font-size: 0.72rem;
-          color: var(--accent);
+          font-weight: 700;
+          color: rgba(240,240,240,0.3);
           letter-spacing: 0.12em;
           padding-top: 0.25rem;
           min-width: 26px;
-          opacity: 0.7;
-          transition: opacity 0.3s;
+          transition: color 0.3s, text-shadow 0.3s;
         }
-        .cf-field:focus-within .cf-number { opacity: 1; }
+        .cf-field.is-active .cf-number,
+        .cf-field.is-filled .cf-number {
+          color: var(--accent);
+          text-shadow: 0 0 12px rgba(208,255,0,.5);
+        }
         .cf-input-wrap {
           flex: 1;
           display: flex;
           flex-direction: column;
-          gap: 0.25rem;
+          gap: 0.35rem;
         }
         .cf-label {
-          font-size: 0.62rem;
+          font-size: 0.64rem;
           text-transform: uppercase;
           letter-spacing: 0.2em;
-          color: rgba(240,240,240,0.3);
+          font-weight: 600;
+          color: rgba(240,240,240,0.4);
           transition: color 0.3s;
           font-family: 'Inter', sans-serif;
         }
-        .cf-field:focus-within .cf-label { color: var(--accent); }
+        .cf-field.is-active .cf-label { color: var(--accent); }
         .cf-input {
           background: transparent;
           border: none;
           outline: none;
-          color: var(--text);
+          color: #ffffff;
           font-family: 'Inter', sans-serif;
-          font-size: 1rem;
-          padding: 0.15rem 0;
+          font-size: 1.05rem;
+          font-weight: 500;
+          padding: 0.2rem 0;
           width: 100%;
           caret-color: var(--accent);
         }
-        .cf-input::placeholder { color: rgba(240,240,240,0.18); }
+        .cf-input::placeholder { color: rgba(240,240,240,0.22); font-weight: 400; }
         .cf-textarea {
           resize: none;
           line-height: 1.6;
@@ -297,21 +380,20 @@ export default function Footer({
         }
         .cf-row .cf-field { flex: 1; }
         .cf-row .cf-field:first-child {
-          padding-right: 2rem;
-          border-right: 1px solid rgba(255,255,255,0.06);
+          margin-right: 0;
+          border-right: 1px solid rgba(255,255,255,0.08);
         }
-        .cf-row .cf-field:last-child { padding-left: 2rem; }
         .cf-submit-wrap {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding-top: 2rem;
+          padding-top: 2.2rem;
           flex-wrap: wrap;
           gap: 1rem;
         }
         .cf-disclaimer {
           font-size: 0.72rem;
-          color: rgba(240,240,240,0.25);
+          color: rgba(240,240,240,0.3);
           letter-spacing: 0.04em;
           max-width: 220px;
           line-height: 1.5;
@@ -352,6 +434,7 @@ export default function Footer({
         .cf-submit-btn:hover .cf-submit-circle {
           background: var(--accent);
           border-color: var(--accent);
+          box-shadow: 0 0 24px rgba(208,255,0,.4);
         }
         .cf-submit-btn:hover .cf-submit-circle svg {
           stroke: #000;
@@ -366,6 +449,7 @@ export default function Footer({
         .cf-success-icon {
           width: 48px; height: 48px; border-radius: 50%;
           background: var(--accent);
+          box-shadow: 0 0 24px rgba(208,255,0,.45);
           display: flex; align-items: center; justify-content: center;
         }
         .cf-success-icon svg {
@@ -392,13 +476,69 @@ export default function Footer({
           flex-wrap: wrap; gap: 1rem;
         }
         .social-links { display: flex; gap: 1.5rem; }
+        .dev-badge {
+          display: inline-flex;
+          align-items: center;
+          border: 1px solid rgba(208,255,0,.25);
+          border-radius: 100px;
+          overflow: hidden;
+          transition: border-color .3s, box-shadow .3s;
+        }
+        .dev-badge:hover {
+          border-color: rgba(208,255,0,.6);
+          box-shadow: 0 0 20px rgba(208,255,0,.12);
+        }
+        .dev-badge-link {
+          display: inline-flex;
+          align-items: center;
+          gap: .6rem;
+          font-size: .76rem;
+          color: rgba(240,240,240,0.55);
+          letter-spacing: .02em;
+          padding: .5rem 1rem;
+          text-decoration: none;
+          transition: color .3s, background .3s;
+        }
+        .dev-badge-link:hover {
+          color: rgba(240,240,240,0.85);
+          background: rgba(208,255,0,0.06);
+        }
+        .dev-badge-link strong {
+          font-weight: 700;
+          color: var(--accent);
+          font-family: 'Space Grotesk', sans-serif;
+          letter-spacing: 0;
+        }
+        .dev-badge-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--accent);
+          box-shadow: 0 0 8px rgba(208,255,0,.8);
+          flex-shrink: 0;
+        }
+        .dev-badge-wpp {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          align-self: stretch;
+          border-left: 1px solid rgba(208,255,0,.25);
+          color: rgba(240,240,240,0.5);
+          transition: color .3s, background .3s;
+        }
+        .dev-badge-wpp svg { width: 15px; height: 15px; }
+        .dev-badge-wpp:hover {
+          color: #000;
+          background: var(--accent);
+        }
 
         @media (max-width: 900px) {
           footer { padding: 5rem 2rem 2rem; }
           .footer-blocks { flex-direction: column; gap: 3rem; }
+          .cf-header { margin-bottom: 2rem; }
           .cf-row { flex-direction: column; }
-          .cf-row .cf-field:first-child { border-right: none; padding-right: 0; }
-          .cf-row .cf-field:last-child { padding-left: 0; }
+          .cf-row .cf-field:first-child { border-right: none; }
           .footer-bottom { flex-direction: column; gap: 1.5rem; }
         }
       `}</style>
