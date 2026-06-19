@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies.auth import exigir_admin
+from app.routers.auth import exigir_admin
 from app.models.orm import Categoria as CategoriaORM
 from app.models.schemas import CategoriaInput, CategoriaOut, MensagemOut
 from app.services.cache import cache_get, cache_invalidate, cache_set
