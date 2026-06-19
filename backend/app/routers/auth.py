@@ -8,16 +8,18 @@ GET  /auth/me     — retorna o email do admin autenticado (útil pro frontend
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import jwt
+
 from app.database import get_db
-from app.dependencies.auth import exigir_admin
 from app.models.orm import AdminUser
-from app.models.schemas import LoginInput, LoginOut
-from app.services.security import criar_token, verificar_senha
+from app.models.schemas import LoginInput, TokenOut
+from app.services.security import criar_token, verificar_senha, decodificar_token
 
 logger = logging.getLogger(__name__)
 
@@ -25,17 +27,42 @@ router = APIRouter(prefix="/auth", tags=["Autenticação"])
 
 limiter = Limiter(key_func=get_remote_address)
 
-# Mensagem genérica de propósito: não revela se foi o e-mail ou a senha que errou.
+_bearer = HTTPBearer(auto_error=False)
+
 ERRO_CREDENCIAIS = "E-mail ou senha inválidos."
 
 
-@router.post("/login", response_model=LoginOut)
+# ── Dependency reutilizável em todos os routers ───────────────────────────────
+
+async def exigir_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> str:
+    """
+    Extrai e valida o JWT do header Authorization: Bearer <token>.
+    Retorna o email do admin se válido, levanta 401 caso contrário.
+    Importe esta função nos outros routers:
+        from app.routers.auth import exigir_admin
+    """
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Token não fornecido.")
+    try:
+        email = decodificar_token(credentials.credentials)
+        return email
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expirado.")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Token inválido.")
+
+
+# ── Endpoints ─────────────────────────────────────────────────────────────────
+
+@router.post("/login", response_model=TokenOut)
 @limiter.limit("5/minute")
 async def login(
     request: Request,
     dados: LoginInput,
     db: AsyncSession = Depends(get_db),
-) -> LoginOut:
+) -> TokenOut:
     email_normalizado = dados.email.strip().lower()
 
     result = await db.execute(
@@ -49,7 +76,7 @@ async def login(
 
     token = criar_token(admin.email)
     logger.info("Login bem-sucedido: %s", admin.email)
-    return LoginOut(access_token=token, email=admin.email)
+    return TokenOut(access_token=token)
 
 
 @router.get("/me")
