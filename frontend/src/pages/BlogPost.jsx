@@ -1,89 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { getBlogPost, getBlogPosts, getConfig } from '../lib/api';
 
-// ── Dados mockados (substituir por fetch via lib/api.js depois) ──────────────
-const MOCK_POSTS = {
-  'showreel-2024': {
-    id: '1',
-    titulo: 'Como criamos o Showreel 2024',
-    slug: 'showreel-2024',
-    resumo: 'Bastidores completos da produção mais ambiciosa da Creapes: do conceito ao frame final, passando por colorização, VFX e mixagem de som.',
-    imagem_capa: 'https://images.unsplash.com/photo-1536240478700-b869ad10e128?w=1920',
-    data_publicacao: '2024-06-01',
-    conteudo: `
-      <p>Todo showreel começa muito antes das câmeras ligarem. O Showreel 2024 da Creapes foi o resultado de doze meses de projetos, erros calculados e descobertas que só acontecem quando você decide ir além do que já funciona.</p>
-
-      <h2>O conceito: movimento como linguagem</h2>
-      <p>A pergunta que nos guiou desde o início foi simples e difícil ao mesmo tempo: <em>o que acontece no intervalo entre dois frames?</em> Não o frame anterior, não o seguinte — o espaço invisível entre eles. É ali que a emoção vive.</p>
-      <p>Partimos dessa ideia para construir uma linguagem visual onde a câmera nunca descansa, mas também nunca perturba. Cada movimento foi coreografado com a mesma atenção que um diretor de dança dá a um bailarino.</p>
-
-      <h2>Equipamentos e abordagem técnica</h2>
-      <p>Usamos a RED MONSTRO 8K como câmera principal em 80% das cenas, complementada pela ARRI ALEXA Mini LF para situações de baixa luminosidade onde a textura do grain orgânico era parte da intenção estética.</p>
-      <p>Os movimentos de câmera foram executados majoritariamente com sistema de gimbal motorizado de 3 eixos, calibrado frame a frame para as sequências de slow motion filmadas a 120fps.</p>
-
-      <blockquote>
-        <p>"Filmamos mais de 40 horas de material bruto para chegar a 3 minutos e meio de showreel. Cada segundo sobrevivente passou por pelo menos seis revisões."</p>
-        <cite>— João Silva, Diretor de Fotografia</cite>
-      </blockquote>
-
-      <h2>Colorização: a paleta que define tudo</h2>
-      <p>O color grading foi o processo mais longo de toda a pós-produção. Trabalhamos com DaVinci Resolve em um pipeline HDR, criando LUTs exclusivos para cada conjunto de cenas de acordo com a temperatura emocional desejada.</p>
-      <p>A decisão de manter os tons frios nas sequências urbanas e quentes nas sequências humanas não foi aleatória — foi uma escolha consciente para criar contraste emocional sem precisar de corte.</p>
-
-      <h2>Som: o elemento invisível mais importante</h2>
-      <p>A trilha sonora foi composta especificamente para o showreel por um compositor parceiro que entendeu o brief em uma única reunião: <em>música que respira junto com a imagem, não sobre ela.</em></p>
-      <p>O design de som levou três semanas adicionais para sincronizar cada impacto visual com seu correspondente sonoro, criando a sensação de que imagem e som nasceram juntos — porque nasceram.</p>
-
-      <h2>O que vem a seguir</h2>
-      <p>O Showreel 2024 não é um ponto de chegada. É uma declaração de intenção sobre onde queremos chegar em 2025. Cada frame é um compromisso com um padrão que nos obriga a ser melhores no próximo projeto.</p>
-      <p>Se você quiser conversar sobre como esse processo pode se traduzir no seu próximo projeto de marca, <a href="https://wa.me/5511999999999">fale com a gente</a>.</p>
-    `,
-  },
-  'color-grading-cinematografico': {
-    id: '2',
-    titulo: 'Color Grading Cinematográfico: nossa abordagem',
-    slug: 'color-grading-cinematografico',
-    resumo: 'A cor define a emoção. Exploramos o processo criativo por trás da colorização que transformou a campanha da Nike em uma obra de arte visual.',
-    imagem_capa: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=1920',
-    data_publicacao: '2024-04-18',
-    conteudo: `
-      <p>A colorização não é o último passo da pós-produção. É o primeiro passo da emoção. Tudo que veio antes — a direção, a fotografia, a montagem — existe para chegar aqui: no momento em que a cor decide o que o espectador vai sentir antes mesmo de processar o que está vendo.</p>
-
-      <h2>O briefing da Nike</h2>
-      <p>Quando a Nike nos trouxe o projeto, o briefing era claro: "queremos que as pessoas sintam o suor antes de ver o atleta". Essa frase virou a bússola de todo o processo de colorização.</p>
-
-      <h2>Pipeline e ferramentas</h2>
-      <p>Todo o trabalho foi realizado em DaVinci Resolve Studio com monitoramento em painel de referência Flanders Scientific. O ambiente controlado é inegociável — colorizar sem referência calibrada é pintar com os olhos fechados.</p>
-
-      <blockquote>
-        <p>"Cor não é sobre fazer bonito. É sobre fazer verdadeiro."</p>
-        <cite>— Ana Lima, Colorista Sênior</cite>
-      </blockquote>
-
-      <p>Desenvolvemos três LUTs exclusivos para o projeto, cada um correspondendo a um contexto emocional distinto: treino, competição e vitória. A transição entre eles foi o verdadeiro trabalho criativo.</p>
-    `,
-  },
-  'brand-films-contar-historias': {
-    id: '3',
-    titulo: 'Brand Films: contar histórias que ficam',
-    slug: 'brand-films-contar-historias',
-    resumo: 'Por que os melhores filmes de marca são aqueles que ninguém percebe como publicidade — e como chegamos lá em cada projeto que produzimos.',
-    imagem_capa: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1920',
-    data_publicacao: '2024-02-10',
-    conteudo: `
-      <p>O melhor elogio que um brand film pode receber é: "nem parecia publicidade". Isso não é um acidente — é resultado de uma escolha filosófica que fazemos antes de escrever uma linha de roteiro.</p>
-
-      <h2>A diferença entre anunciar e narrar</h2>
-      <p>Anunciar é falar sobre o produto. Narrar é falar sobre o mundo em que o produto existe — e fazer isso de um jeito que o espectador se reconheça nesse mundo antes de reconhecer a marca.</p>
-      <p>Essa distinção define tudo: a escolha dos personagens, os ambientes, o ritmo de edição, a música. Cada elemento existe para servir à história, não ao logo.</p>
-
-      <h2>Case: Itaú Unibanco</h2>
-      <p>O filme institucional do Itaú não começa com números nem com produtos financeiros. Começa com uma avó ensinando a neta a contar moedas numa cozinha de interior. Só no terceiro ato a marca aparece — e quando aparece, já faz sentido.</p>
-
-      <p>Esse é o trabalho: chegar no ponto onde a marca é a conclusão natural da história, não a interrupção dela.</p>
-    `,
-  },
-};
+const LOGO_FALLBACK = 'https://res.cloudinary.com/dhu1cqvrb/image/upload/v1781788827/creapeslogo_jajjgt.png';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatDate(iso) {
@@ -101,9 +20,34 @@ function estimateReadTime(html) {
 export default function BlogPost() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const post = MOCK_POSTS[slug] || MOCK_POSTS['showreel-2024'];
-  // Substituir por:
-  // useEffect(() => { getBlogPost(slug).then(setPost).catch(() => navigate('/blog')); }, [slug]);
+
+  const [post, setPost] = useState(null);
+  const [allPosts, setAllPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [logo, setLogo] = useState(LOGO_FALLBACK);
+
+  useEffect(() => {
+    getConfig()
+      .then((config) => {
+        const url = config?.logo_url || config?.logo;
+        if (url) setLogo(url);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    setNotFound(false);
+    getBlogPost(slug)
+      .then(setPost)
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false));
+
+    getBlogPosts()
+      .then(setAllPosts)
+      .catch(() => setAllPosts([]));
+  }, [slug]);
 
   const heroRef = useRef(null);
   const contentRef = useRef(null);
@@ -131,6 +75,7 @@ export default function BlogPost() {
 
   // ── Fade-in do conteúdo ───────────────────────────────────────────────────
   useEffect(() => {
+    if (!post) return;
     const els = contentRef.current?.querySelectorAll('.bp-fade') || [];
     const obs = new IntersectionObserver(
       (entries) => {
@@ -149,9 +94,47 @@ export default function BlogPost() {
   }, [post]);
 
   // Posts relacionados (todos exceto o atual)
-  const relacionados = Object.values(MOCK_POSTS)
-    .filter(p => p.slug !== post.slug)
-    .slice(0, 2);
+  const relacionados = post
+    ? allPosts.filter(p => p.slug !== post.slug).slice(0, 2)
+    : [];
+
+  if (loading) {
+    return (
+      <div className="bp-loading-screen">
+        <span className="bp-loading-dot" /><span className="bp-loading-dot" /><span className="bp-loading-dot" />
+        <style>{`
+          .bp-loading-screen {
+            min-height: 100vh; background: #0b0d0f;
+            display: flex; align-items: center; justify-content: center; gap: .5rem;
+          }
+          .bp-loading-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #d0ff00; opacity: .4; animation: bpBlink 1.2s infinite;
+          }
+          .bp-loading-dot:nth-child(2) { animation-delay: .2s; }
+          .bp-loading-dot:nth-child(3) { animation-delay: .4s; }
+          @keyframes bpBlink { 0%,100%{opacity:.4} 50%{opacity:1} }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (notFound || !post) {
+    return (
+      <div className="bp-notfound-screen">
+        <p>Post não encontrado.</p>
+        <Link to="/blog">Voltar para o blog</Link>
+        <style>{`
+          .bp-notfound-screen {
+            min-height: 100vh; background: #0b0d0f; color: #f0f0f0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+            font-family: 'Inter', sans-serif;
+          }
+          .bp-notfound-screen a { color: #d0ff00; text-decoration: underline; }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -166,7 +149,9 @@ export default function BlogPost() {
 
         {/* ── Navbar inline ── */}
         <nav className="bp-nav">
-          <Link to="/" className="bp-nav__logo">Creapes</Link>
+          <Link to="/" className="bp-nav__logo">
+            <img src={logo} alt="Creapes" />
+          </Link>
           <Link to="/blog" className="bp-nav__back">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
@@ -360,9 +345,10 @@ export default function BlogPost() {
           backdrop-filter: blur(12px);
         }
         .bp-nav__logo {
-          font-family: var(--font-title);
-          font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em;
-          color: var(--text);
+          display: flex; align-items: center;
+        }
+        .bp-nav__logo img {
+          height: 28px; width: auto; display: block;
         }
         .bp-nav__back {
           display: inline-flex; align-items: center; gap: .5rem;
