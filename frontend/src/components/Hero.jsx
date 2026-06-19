@@ -66,10 +66,11 @@ export default function Hero({ slides = [], ready = true }) {
             key={slide.id}
             className={`slide${isActive ? ' active' : ''}`}
           >
-            {/* ── Background: só carrega depois que o loader terminar (evita disputar
-                 banda com ele), mas todos os slides de uma vez assim que a seção abre,
-                 pra não ter delay ao passar o mouse em cima de outro título ── */}
-            {ready && slide.isVimeo && (
+            {/* ── Background: slide 0 carrega imediatamente (assim que os dados da API
+                 chegam), sem esperar o loader terminar — isso elimina o delay duplo
+                 (loader + buffering do Vimeo em sequência). Slides 1+ carregam só após
+                 ready=true pra não disputar banda durante o loader. ── */}
+            {(index === 0 || ready) && slide.isVimeo && (
               <div
                 style={{
                   position: 'absolute', top: 0, left: 0,
@@ -99,7 +100,7 @@ export default function Hero({ slides = [], ready = true }) {
               </div>
             )}
 
-            {ready && !slide.isVimeo && slide.bgVideo && (
+            {(index === 0 || ready) && !slide.isVimeo && slide.bgVideo && (
               <video
                 src={slide.bgVideo}
                 autoPlay
