@@ -36,5 +36,18 @@
   },
   "portfolio": {
     "titulo": "Selected Work"
+  },
+  "blog": {
+    "tituloParte1": "Behind the scenes",
+    "tituloParte2": "& ideas.",
+    "verTudo": "View all",
+    "lerArtigo": "Read article",
+    "artigo": "Article",
+    "voltar": "Back",
+    "headlineParte1": "Behind the scenes",
+    "headlineParte2": "& Ideas.",
+    "headlineParte3": "",
+    "subheadline": "Content, process and references from the audiovisual universe.",
+    "vazio": "No posts found."
   }
 }
