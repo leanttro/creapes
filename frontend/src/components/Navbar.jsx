@@ -23,19 +23,31 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
   const currentLang = i18n.language?.toUpperCase().slice(0, 2) || 'PT';
   const currentIndex = LANGS.indexOf(currentLang) === -1 ? 0 : LANGS.indexOf(currentLang);
 
-  // swipe mobile
+  // swipe mobile — listeners nativos com passive:false só no elemento, não bloqueia scroll da página
   const touchStartX = useRef(null);
-  function onTouchStart(e) { touchStartX.current = e.touches[0].clientX; }
-  function onTouchEnd(e) {
-    if (touchStartX.current === null) return;
-    const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(diff) < 30) return;
-    const next = diff > 0
-      ? Math.min(currentIndex + 1, LANGS.length - 1)
-      : Math.max(currentIndex - 1, 0);
-    i18n.changeLanguage(LANGS[next].toLowerCase());
-    touchStartX.current = null;
-  }
+  const langMobileRef = useRef(null);
+
+  useEffect(() => {
+    const el = langMobileRef.current;
+    if (!el) return;
+    const onStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+    const onEnd = (e) => {
+      if (touchStartX.current === null) return;
+      const diff = touchStartX.current - e.changedTouches[0].clientX;
+      touchStartX.current = null;
+      if (Math.abs(diff) < 25) return;
+      const idx = LANGS.indexOf(i18n.language?.toUpperCase().slice(0, 2) || 'PT');
+      const cur = idx === -1 ? 0 : idx;
+      const next = diff > 0 ? Math.min(cur + 1, LANGS.length - 1) : Math.max(cur - 1, 0);
+      i18n.changeLanguage(LANGS[next].toLowerCase());
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchend', onEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchend', onEnd);
+    };
+  }, [i18n]);
 
   // ── Audio setup ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -172,8 +184,7 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
           {/* Mobile: slider swipeable */}
           <div
             className="lang-wrap lang-wrap--mobile"
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
+            ref={langMobileRef}
           >
             <div
               className="lang-slider-track"
