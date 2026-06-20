@@ -328,21 +328,23 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
         /* Mobile: slider */
         @media (max-width: 600px) {
           nav { padding: 0.8rem 1.2rem; }
-          .lang-wrap--desktop { display: none; }
+          .lang-wrap--desktop { display: none !important; }
           .lang-wrap--mobile {
-            display: flex; align-items: center;
-            width: 32px; overflow: hidden;
-            padding-left: 8px; margin-left: 2px;
+            display: flex !important; align-items: center;
+            overflow: hidden; width: 34px;
+            border-left: 1px solid rgba(255,255,255,0.15);
+            padding-left: 8px; margin-left: 4px;
           }
           .lang-slider-track {
-            display: flex; transition: transform 0.25s ease;
+            display: flex;
+            transition: transform 0.25s ease;
             will-change: transform;
           }
           .lang-slide {
-            min-width: 32px; text-align: center;
+            min-width: 34px; text-align: left;
             font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600;
             letter-spacing: 0.08em; color: var(--accent);
-            text-transform: uppercase; user-select: none;
+            text-transform: uppercase; user-select: none; line-height: 1;
           }
         }
         @media (min-width: 601px) and (max-width: 900px) {
