@@ -25,10 +25,10 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 EXTENSOES_PERMITIDAS = {
     ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg",
-    ".mp4", ".mov", ".pdf",
+    ".mp4", ".mov", ".pdf", ".mp3", ".wav", ".ogg", ".m4a",
 }
 
-MAX_SIZE_MB = 50
+MAX_SIZE_MB = 200
 
 
 @router.post("", response_model=UploadOut)
