@@ -1,0 +1,6 @@
+/* Impede scroll horizontal no mobile sem travar sticky/fixed */
+@media (max-width: 768px) {
+  html {
+    overflow-x: clip;
+  }
+}
