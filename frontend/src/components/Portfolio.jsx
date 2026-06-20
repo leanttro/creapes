@@ -82,7 +82,7 @@ export default function Portfolio({ items = [], ready = true }) {
           <div className="minimal-obj m-obj-3"></div>
         </div>
 
-        <h2 className="portfolio-section-title fade-in">Selected Work</h2>
+        <h2 className="portfolio-section-title fade-in">{t('portfolio.titulo')}</h2>
 
         <div className="portfolio-track" ref={trackRef}>
           {items.map((item, idx) => {
