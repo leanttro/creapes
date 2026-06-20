@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { getBlogPosts } from '../lib/api';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function formatDate(iso) {
+function formatDate(iso, lang = 'pt') {
   if (!iso) return '';
   const d = new Date(iso);
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const locale = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
+  return d.toLocaleDateString(locale[lang] || 'pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 // ── Sub-componentes ───────────────────────────────────────────────────────────
 function PostCard({ post, index, featured = false }) {
+  const { t, i18n } = useTranslation();
   const cardRef = useRef(null);
 
   useEffect(() => {
@@ -48,15 +51,15 @@ function PostCard({ post, index, featured = false }) {
           <div className="post-card__thumb-placeholder" />
         )}
         <div className="post-card__thumb-overlay" />
-        <span className="post-card__tag">Artigo</span>
+        <span className="post-card__tag">{t('blog.artigo')}</span>
       </div>
 
       <div className="post-card__body">
-        <time className="post-card__date">{formatDate(post.data_publicacao)}</time>
+        <time className="post-card__date">{formatDate(post.data_publicacao, i18n.language)}</time>
         <h2 className="post-card__titulo">{post.titulo}</h2>
         <p className="post-card__resumo">{post.resumo}</p>
         <span className="post-card__cta">
-          Ler artigo
+          {t('blog.lerArtigo')}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -68,6 +71,7 @@ function PostCard({ post, index, featured = false }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function BlogList() {
+  const { t, i18n } = useTranslation();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -95,7 +99,7 @@ export default function BlogList() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Voltar
+              {t('blog.voltar')}
             </Link>
 
             <div className="blog-header__meta">
@@ -104,12 +108,10 @@ export default function BlogList() {
                 Blog
               </p>
               <h1 className="blog-headline">
-                Pensamentos,<br />
-                <em>bastidores</em> &amp; visão.
+                {t('blog.headlineParte1')}<br />
+                <em>{t('blog.headlineParte2')}</em> {t('blog.headlineParte3')}
               </h1>
-              <p className="blog-subheadline">
-                Produção audiovisual, criatividade e tudo que acontece antes das câmeras ligarem.
-              </p>
+              <p className="blog-subheadline">{t('blog.subheadline')}</p>
             </div>
           </div>
           <div className="blog-header__deco" aria-hidden="true">BLOG</div>
@@ -143,7 +145,7 @@ export default function BlogList() {
         {/* ── Estado vazio ── */}
         {!loading && posts.length === 0 && (
           <div className="blog-empty">
-            <p className="blog-empty__text">Nenhum post publicado ainda.</p>
+            <p className="blog-empty__text">{t('blog.vazio')}</p>
           </div>
         )}
       </div>
