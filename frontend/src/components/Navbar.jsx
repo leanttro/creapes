@@ -21,6 +21,21 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
 
   const LANGS = ['PT', 'EN', 'ES'];
   const currentLang = i18n.language?.toUpperCase().slice(0, 2) || 'PT';
+  const currentIndex = LANGS.indexOf(currentLang) === -1 ? 0 : LANGS.indexOf(currentLang);
+
+  // swipe mobile
+  const touchStartX = useRef(null);
+  function onTouchStart(e) { touchStartX.current = e.touches[0].clientX; }
+  function onTouchEnd(e) {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) < 30) return;
+    const next = diff > 0
+      ? Math.min(currentIndex + 1, LANGS.length - 1)
+      : Math.max(currentIndex - 1, 0);
+    i18n.changeLanguage(LANGS[next].toLowerCase());
+    touchStartX.current = null;
+  }
 
   // ── Audio setup ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -142,7 +157,8 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
           )}
 
           {/* Seletor de idioma */}
-          <div className="lang-wrap">
+          {/* Desktop: 3 botões lado a lado */}
+          <div className="lang-wrap lang-wrap--desktop">
             {LANGS.map((lang) => (
               <button
                 key={lang}
@@ -152,6 +168,21 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
                 {lang}
               </button>
             ))}
+          </div>
+          {/* Mobile: slider swipeable */}
+          <div
+            className="lang-wrap lang-wrap--mobile"
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+          >
+            <div
+              className="lang-slider-track"
+              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+            >
+              {LANGS.map((lang) => (
+                <span key={lang} className="lang-slide">{lang}</span>
+              ))}
+            </div>
           </div>
 
         </div>
@@ -266,26 +297,46 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
 
         /* ── Seletor de idioma ── */
         .lang-wrap {
-          display: flex; align-items: center; gap: 2px;
           border-left: 1px solid rgba(255,255,255,0.15);
           padding-left: 12px; margin-left: 4px;
+          display: flex; align-items: center;
         }
         .lang-btn {
           background: none; border: none; color: rgba(255,255,255,0.4);
           font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600;
           letter-spacing: 0.08em; cursor: pointer; padding: 3px 5px;
-          transition: color 0.2s ease;
-          text-transform: uppercase;
+          transition: color 0.2s ease; text-transform: uppercase;
         }
         .lang-btn:hover { color: rgba(255,255,255,0.8); }
         .lang-btn.active { color: var(--accent); }
 
-        @media (max-width: 900px) {
+        /* desktop: mostra os 3 botões, esconde slider */
+        .lang-wrap--desktop { display: flex; gap: 2px; }
+        .lang-wrap--mobile  { display: none; }
+
+        /* Mobile: slider */
+        @media (max-width: 600px) {
+          nav { padding: 0.8rem 1.2rem; }
+          .lang-wrap--desktop { display: none; }
+          .lang-wrap--mobile {
+            display: flex; align-items: center;
+            width: 32px; overflow: hidden;
+            padding-left: 8px; margin-left: 2px;
+          }
+          .lang-slider-track {
+            display: flex; transition: transform 0.25s ease;
+            will-change: transform;
+          }
+          .lang-slide {
+            min-width: 32px; text-align: center;
+            font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600;
+            letter-spacing: 0.08em; color: var(--accent);
+            text-transform: uppercase; user-select: none;
+          }
+        }
+        @media (min-width: 601px) and (max-width: 900px) {
           nav { padding: 0.8rem 2rem; }
           .lang-wrap { padding-left: 8px; margin-left: 2px; }
-        }
-        @media (max-width: 480px) {
-          .lang-btn { font-size: 0.65rem; padding: 2px 4px; }
         }
       `}</style>
     </>
