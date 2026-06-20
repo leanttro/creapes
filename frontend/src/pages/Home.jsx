@@ -1,4 +1,5 @@
 import { useEffect, useState, lazy, Suspense, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import gsap from 'gsap';
 
@@ -24,6 +25,7 @@ function formatBlogDate(iso) {
 
 // ── Seção de carrossel do blog ────────────────────────────────────────────────
 function BlogCarousel() {
+  const { t } = useTranslation();
   const [posts, setPosts] = useState([]);
   const trackRef = useState(() => ({ current: null }))[0];
 
@@ -52,12 +54,12 @@ function BlogCarousel() {
             Blog
           </p>
           <h2 className="blog-carousel__title">
-            Bastidores<br /><em>&amp; ideias.</em>
+            {t('blog.tituloParte1')}<br /><em>{t('blog.tituloParte2')}</em>
           </h2>
         </div>
         <div className="blog-carousel__actions">
           <Link to="/blog" className="blog-carousel__viewall">
-            Ver tudo
+            {t('blog.verTudo')}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -94,7 +96,7 @@ function BlogCarousel() {
               <h3 className="blog-carousel__card-title">{post.titulo}</h3>
               <p className="blog-carousel__card-resumo">{post.resumo}</p>
               <span className="blog-carousel__card-cta">
-                Ler artigo
+                {t('blog.lerArtigo')}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
