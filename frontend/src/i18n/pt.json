@@ -1,0 +1,37 @@
+{
+  "nav": {
+    "inicio": "Início",
+    "portfolio": "Portfólio",
+    "contato": "Contato"
+  },
+  "hero": {
+    "tagline": "Produtora Audiovisual",
+    "cta": "Ver Portfólio"
+  },
+  "sobre": {
+    "eyebrow": "Sobre nós"
+  },
+  "portfolio": {
+    "eyebrow": "Portfólio",
+    "titulo": "Nossos projetos.",
+    "verTodos": "Ver todos"
+  },
+  "blog": {
+    "eyebrow": "Blog",
+    "titulo": "Bastidores & ideias.",
+    "verTudo": "Ver tudo"
+  },
+  "contato": {
+    "titulo": "Vamos conversar?",
+    "subtitulo": "Entre em contato",
+    "nome": "Seu nome",
+    "email": "Seu e-mail",
+    "mensagem": "Sua mensagem",
+    "enviar": "Enviar mensagem",
+    "sucesso": "Mensagem enviada!",
+    "erro": "Erro ao enviar. Tente novamente."
+  },
+  "footer": {
+    "direitos": "Todos os direitos reservados."
+  }
+}
