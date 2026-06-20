@@ -21,27 +21,7 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
 
   const LANGS = ['PT', 'EN', 'ES'];
   const currentLang = i18n.language?.toUpperCase().slice(0, 2) || 'PT';
-  const currentIndex = Math.max(0, LANGS.indexOf(currentLang));
-  const langMobileRef = useRef(null);
-  const touchStartX = useRef(null);
-
-  useEffect(() => {
-    const el = langMobileRef.current;
-    if (!el) return;
-    const onStart = (e) => { touchStartX.current = e.touches[0].clientX; };
-    const onEnd = (e) => {
-      if (touchStartX.current === null) return;
-      const diff = touchStartX.current - e.changedTouches[0].clientX;
-      touchStartX.current = null;
-      if (Math.abs(diff) < 25) return;
-      const idx = Math.max(0, LANGS.indexOf(i18n.language?.toUpperCase().slice(0, 2) || 'PT'));
-      const next = diff > 0 ? Math.min(idx + 1, 2) : Math.max(idx - 1, 0);
-      i18n.changeLanguage(LANGS[next].toLowerCase());
-    };
-    el.addEventListener('touchstart', onStart, { passive: true });
-    el.addEventListener('touchend', onEnd, { passive: true });
-    return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchend', onEnd); };
-  }, [i18n]);
+  const [langOpen, setLangOpen] = useState(false);
 
   // ── Audio setup ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -162,7 +142,7 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
             </div>
           )}
 
-          {/* Seletor de idioma — desktop: 3 botões / mobile: slider */}
+          {/* Seletor de idioma — desktop: 3 botões / mobile: globo + dropdown */}
           <div className="lang-wrap lang-desktop">
             {LANGS.map((lang) => (
               <button
@@ -174,12 +154,26 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
               </button>
             ))}
           </div>
-          <div className="lang-wrap lang-mobile" ref={langMobileRef}>
-            <div className="lang-track" style={{ transform: `translateX(-${currentIndex * 28}px)` }}>
-              {LANGS.map((lang) => (
-                <span key={lang} className={`lang-slide ${currentLang === lang ? 'active' : ''}`}>{lang}</span>
-              ))}
-            </div>
+          <div className="lang-wrap lang-mobile">
+            <button className="lang-globe-btn" onClick={() => setLangOpen(o => !o)} aria-label="Idioma">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+            </button>
+            {langOpen && (
+              <div className="lang-dropdown">
+                {LANGS.map((lang) => (
+                  <button
+                    key={lang}
+                    className={`lang-drop-btn ${currentLang === lang ? 'active' : ''}`}
+                    onClick={() => { i18n.changeLanguage(lang.toLowerCase()); setLangOpen(false); }}
+                  >
+                    {lang}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
@@ -312,28 +306,37 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
           nav { padding: 0.8rem 2rem; }
           .lang-wrap { padding-left: 8px; margin-left: 2px; }
         }
-        /* Mobile slider */
         .lang-desktop { display: flex; }
         .lang-mobile  { display: none; }
         @media (max-width: 600px) {
+          nav { padding: 0.8rem 1.2rem; }
           .lang-desktop { display: none; }
           .lang-mobile {
-            display: flex;
-            width: 28px; overflow: hidden;
+            display: flex; align-items: center; position: relative;
             border-left: 1px solid rgba(255,255,255,0.15);
-            padding-left: 8px; margin-left: 4px;
+            padding-left: 10px; margin-left: 4px;
           }
-          .lang-track {
-            display: flex; gap: 0;
-            transition: transform 0.25s ease;
+          .lang-globe-btn {
+            background: none; border: none; color: #fff;
+            cursor: pointer; display: flex; align-items: center;
+            padding: 4px; transition: color 0.2s;
           }
-          .lang-slide {
-            min-width: 28px;
-            font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600;
+          .lang-globe-btn:hover { color: var(--accent); }
+          .lang-dropdown {
+            position: absolute; top: calc(100% + 10px); right: 0;
+            background: #111; border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px; overflow: hidden; z-index: 99999;
+            display: flex; flex-direction: column;
+          }
+          .lang-drop-btn {
+            background: none; border: none; color: rgba(255,255,255,0.5);
+            font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600;
             letter-spacing: 0.08em; text-transform: uppercase;
-            color: rgba(255,255,255,0.4); user-select: none;
+            padding: 10px 20px; cursor: pointer; text-align: center;
+            transition: background 0.2s, color 0.2s;
           }
-          .lang-slide.active { color: var(--accent); }
+          .lang-drop-btn:hover { background: rgba(255,255,255,0.06); color: #fff; }
+          .lang-drop-btn.active { color: var(--accent); }
         }
       `}</style>
     </>
