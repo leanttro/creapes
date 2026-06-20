@@ -21,11 +21,9 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
 
   const LANGS = ['PT', 'EN', 'ES'];
   const currentLang = i18n.language?.toUpperCase().slice(0, 2) || 'PT';
-  const currentIndex = LANGS.indexOf(currentLang) === -1 ? 0 : LANGS.indexOf(currentLang);
-
-  // swipe mobile — listeners nativos com passive:false só no elemento, não bloqueia scroll da página
-  const touchStartX = useRef(null);
+  const currentIndex = Math.max(0, LANGS.indexOf(currentLang));
   const langMobileRef = useRef(null);
+  const touchStartX = useRef(null);
 
   useEffect(() => {
     const el = langMobileRef.current;
@@ -36,17 +34,13 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
       const diff = touchStartX.current - e.changedTouches[0].clientX;
       touchStartX.current = null;
       if (Math.abs(diff) < 25) return;
-      const idx = LANGS.indexOf(i18n.language?.toUpperCase().slice(0, 2) || 'PT');
-      const cur = idx === -1 ? 0 : idx;
-      const next = diff > 0 ? Math.min(cur + 1, LANGS.length - 1) : Math.max(cur - 1, 0);
+      const idx = Math.max(0, LANGS.indexOf(i18n.language?.toUpperCase().slice(0, 2) || 'PT'));
+      const next = diff > 0 ? Math.min(idx + 1, 2) : Math.max(idx - 1, 0);
       i18n.changeLanguage(LANGS[next].toLowerCase());
     };
     el.addEventListener('touchstart', onStart, { passive: true });
     el.addEventListener('touchend', onEnd, { passive: true });
-    return () => {
-      el.removeEventListener('touchstart', onStart);
-      el.removeEventListener('touchend', onEnd);
-    };
+    return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchend', onEnd); };
   }, [i18n]);
 
   // ── Audio setup ────────────────────────────────────────────────────────────
@@ -168,9 +162,8 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
             </div>
           )}
 
-          {/* Seletor de idioma */}
-          {/* Desktop: 3 botões lado a lado */}
-          <div className="lang-wrap lang-wrap--desktop">
+          {/* Seletor de idioma — desktop: 3 botões / mobile: slider */}
+          <div className="lang-wrap lang-desktop">
             {LANGS.map((lang) => (
               <button
                 key={lang}
@@ -181,17 +174,10 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
               </button>
             ))}
           </div>
-          {/* Mobile: slider swipeable */}
-          <div
-            className="lang-wrap lang-wrap--mobile"
-            ref={langMobileRef}
-          >
-            <div
-              className="lang-slider-track"
-              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-            >
+          <div className="lang-wrap lang-mobile" ref={langMobileRef}>
+            <div className="lang-track" style={{ transform: `translateX(-${currentIndex * 28}px)` }}>
               {LANGS.map((lang) => (
-                <span key={lang} className="lang-slide">{lang}</span>
+                <span key={lang} className={`lang-slide ${currentLang === lang ? 'active' : ''}`}>{lang}</span>
               ))}
             </div>
           </div>
@@ -308,48 +294,46 @@ export default function Navbar({ brandName = 'Creapes', brandLogo = null, audioU
 
         /* ── Seletor de idioma ── */
         .lang-wrap {
+          display: flex; align-items: center; gap: 2px;
           border-left: 1px solid rgba(255,255,255,0.15);
           padding-left: 12px; margin-left: 4px;
-          display: flex; align-items: center;
         }
         .lang-btn {
           background: none; border: none; color: rgba(255,255,255,0.4);
           font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600;
           letter-spacing: 0.08em; cursor: pointer; padding: 3px 5px;
-          transition: color 0.2s ease; text-transform: uppercase;
+          transition: color 0.2s ease;
+          text-transform: uppercase;
         }
         .lang-btn:hover { color: rgba(255,255,255,0.8); }
         .lang-btn.active { color: var(--accent); }
 
-        /* desktop: mostra os 3 botões, esconde slider */
-        .lang-wrap--desktop { display: flex; gap: 2px; }
-        .lang-wrap--mobile  { display: none; }
-
-        /* Mobile: slider */
+        @media (max-width: 900px) {
+          nav { padding: 0.8rem 2rem; }
+          .lang-wrap { padding-left: 8px; margin-left: 2px; }
+        }
+        /* Mobile slider */
+        .lang-desktop { display: flex; }
+        .lang-mobile  { display: none; }
         @media (max-width: 600px) {
-          nav { padding: 0.8rem 1.2rem; }
-          .lang-wrap--desktop { display: none !important; }
-          .lang-wrap--mobile {
-            display: flex !important; align-items: center;
-            overflow: hidden; width: 34px;
+          .lang-desktop { display: none; }
+          .lang-mobile {
+            display: flex;
+            width: 28px; overflow: hidden;
             border-left: 1px solid rgba(255,255,255,0.15);
             padding-left: 8px; margin-left: 4px;
           }
-          .lang-slider-track {
-            display: flex;
+          .lang-track {
+            display: flex; gap: 0;
             transition: transform 0.25s ease;
-            will-change: transform;
           }
           .lang-slide {
-            min-width: 34px; text-align: left;
+            min-width: 28px;
             font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600;
-            letter-spacing: 0.08em; color: var(--accent);
-            text-transform: uppercase; user-select: none; line-height: 1;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            color: rgba(255,255,255,0.4); user-select: none;
           }
-        }
-        @media (min-width: 601px) and (max-width: 900px) {
-          nav { padding: 0.8rem 2rem; }
-          .lang-wrap { padding-left: 8px; margin-left: 2px; }
+          .lang-slide.active { color: var(--accent); }
         }
       `}</style>
     </>
