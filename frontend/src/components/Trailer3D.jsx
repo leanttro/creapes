@@ -308,7 +308,7 @@ export default function Trailer3D({
               textDecoration: 'none', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700,
               fontSize: '1.2rem', borderRadius: '50px', textTransform: 'uppercase', transition: 'all 0.3s',
             }}>
-              Start a Project
+              {t('trailer.cta')}
             </a>
           </div>
         </div>
