@@ -180,9 +180,10 @@
 }
 @media (max-width: 768px) {
   .evolve-phrase {
-    font-size: clamp(1.4rem, 7vw, 2.5rem);
+    font-size: clamp(1.1rem, 6vw, 2rem);
     padding: 0 1rem;
-    word-break: keep-all;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: normal;
+    max-width: 100%;
   }
 }
