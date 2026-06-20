@@ -1,0 +1,40 @@
+{
+  "nav": {
+    "inicio": "Home",
+    "portfolio": "Portfolio",
+    "contato": "Contact"
+  },
+  "footer": {
+    "startProject": "Start a Project",
+    "labelNome": "Your Name",
+    "placeholderNome": "What's your name?",
+    "labelWhatsapp": "WhatsApp",
+    "labelEmail": "E-mail",
+    "labelProjeto": "About the Project",
+    "placeholderProjeto": "Tell me about what we'll create together...",
+    "disclaimer": "Your data is safe and will not be shared.",
+    "enviando": "Sending…",
+    "enviarBriefing": "Send Briefing",
+    "sucessoTitulo": "Briefing Received!",
+    "sucessoTexto": "We'll get back to you soon. Thanks for your interest!",
+    "joinCrew": "Join the Crew",
+    "joinTexto": "We're looking for restless minds. Video editors, motion designers and colorists who breathe art and technology. If you want to push the limits of audiovisual, your place is here.",
+    "trabalheConosco": "Work With Us",
+    "direitos": "All rights reserved."
+  },
+  "clientes": {
+    "titulo": "Our clients",
+    "verTodos": "Meet them all"
+  },
+  "trailer": {
+    "showreel": "Our Showreel",
+    "tagline": "Raising the audiovisual standard",
+    "cta": "Start a Project"
+  },
+  "insta": {
+    "titulo": "Follow our Instagram"
+  },
+  "portfolio": {
+    "titulo": "Selected Work"
+  }
+}
