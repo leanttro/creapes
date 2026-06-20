@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import './no-horizontal-scroll.css';
+import './styles/no-horizontal-scroll.css';
 import { createRoot } from 'react-dom/client';
 import './styles/tokens.css';
 import './i18n/i18n.js';
