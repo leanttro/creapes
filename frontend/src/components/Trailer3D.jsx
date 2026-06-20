@@ -207,7 +207,13 @@ export default function Trailer3D({
 
     function onVisibilityChange() {
       isTabVisible = !document.hidden;
-      isTabVisible ? startAnimation() : stopAnimation();
+      if (isTabVisible) {
+        clock.start(); // retoma sem acumular delta
+        startAnimation();
+      } else {
+        stopAnimation();
+        clock.stop();
+      }
     }
     document.addEventListener('visibilitychange', onVisibilityChange);
 
