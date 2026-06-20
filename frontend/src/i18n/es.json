@@ -35,6 +35,19 @@
     "titulo": "Síguenos en Instagram"
   },
   "portfolio": {
-    "titulo": "Selected Work"
+    "titulo": "Trabajos Seleccionados"
+  },
+  "blog": {
+    "tituloParte1": "Bastidores",
+    "tituloParte2": "& ideas.",
+    "verTudo": "Ver todo",
+    "lerArtigo": "Leer artículo",
+    "artigo": "Artículo",
+    "voltar": "Volver",
+    "headlineParte1": "Bastidores",
+    "headlineParte2": "& Ideas.",
+    "headlineParte3": "",
+    "subheadline": "Contenido, proceso y referencias del universo audiovisual.",
+    "vazio": "No se encontraron posts."
   }
 }
