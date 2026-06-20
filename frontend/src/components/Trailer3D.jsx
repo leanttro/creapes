@@ -85,21 +85,30 @@ export default function Trailer3D({
     const step2   = step2Ref.current;
     if (!section || !canvas) return;
 
+    // [MOBILE FIX] detecta mobile uma vez na montagem da cena
+    const isMobile = window.innerWidth <= 768;
+
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x050505, 0.012);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 40;
 
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    // [MOBILE FIX] sem antialias e pixelRatio capado em 1 no mobile — antialias
+    // sozinho já é o maior custo de GPU em telas pequenas com DPR alto.
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !isMobile });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2));
 
     const cubesGroup = new THREE.Group();
     const geometry   = new THREE.BoxGeometry(1, 1, 1);
     const materials  = [];
 
-    for (let i = 0; i < 500; i++) {
+    // [MOBILE FIX] 150 cubos no mobile em vez de 500 — é o maior ganho de
+    // performance, já que cada um é animado (rotation + sin) todo frame.
+    const cubeCount = isMobile ? 150 : 500;
+
+    for (let i = 0; i < cubeCount; i++) {
       const isAccent  = Math.random() > 0.85;
       const cubeColor = isAccent ? 0xd0ff00 : (Math.random() > 0.5 ? 0x222222 : 0x111111);
 
@@ -168,10 +177,20 @@ export default function Trailer3D({
     }
 
     let rafScheduled = false;
+    let skipFrame     = false; // [MOBILE FIX]
     function onScroll() {
       if (rafScheduled) return;
       rafScheduled = true;
-      requestAnimationFrame(() => { updateFromScroll(); rafScheduled = false; });
+      requestAnimationFrame(() => {
+        // [MOBILE FIX] no mobile, atualiza só a cada 2 frames de scroll —
+        // reduz pela metade as chamadas de getBoundingClientRect + DOM writes.
+        if (isMobile) {
+          skipFrame = !skipFrame;
+          if (skipFrame) { rafScheduled = false; return; }
+        }
+        updateFromScroll();
+        rafScheduled = false;
+      });
     }
 
     function onResize() {
@@ -193,11 +212,17 @@ export default function Trailer3D({
     function animate() {
       rafId = requestAnimationFrame(animate);
       const time = clock.getElapsedTime();
-      cubesGroup.children.forEach((cube, i) => {
-        cube.rotation.x += 0.001 * ((i % 3) + 1);
-        cube.rotation.y += 0.002 * ((i % 2) + 1);
-        cube.position.y += Math.sin(time + i) * 0.02;
-      });
+      // [MOBILE FIX] no mobile, pula a atualização individual de cada cubo
+      // (rotation.x/y + sin no position.y) — é o maior custo de CPU por frame.
+      // Os cubos ficam estáticos girando junto com o grupo (scroll), sem o
+      // micro-movimento individual, que é puramente decorativo.
+      if (!isMobile) {
+        cubesGroup.children.forEach((cube, i) => {
+          cube.rotation.x += 0.001 * ((i % 3) + 1);
+          cube.rotation.y += 0.002 * ((i % 2) + 1);
+          cube.position.y += Math.sin(time + i) * 0.02;
+        });
+      }
       accentLight.intensity = 1.5 + Math.sin(time * 2) * 1;
       renderer.render(scene, camera);
     }
@@ -252,7 +277,10 @@ export default function Trailer3D({
         {shouldMount && (
           <canvas
             ref={canvasRef}
-            style={{ width: '100%', height: '100%', display: 'block', position: 'absolute', top: 0, left: 0, zIndex: 1 }}
+            style={{
+              width: '100%', height: '100%', display: 'block', position: 'absolute', top: 0, left: 0, zIndex: 1,
+              touchAction: 'pan-y', // [MOBILE FIX] libera o gesto de scroll vertical nativo sobre o canvas
+            }}
           />
         )}
 
