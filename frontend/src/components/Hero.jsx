@@ -89,6 +89,7 @@ export default function Hero({ slides = [], ready = true }) {
                     position: 'absolute',
                     top: '50%', left: '50%',
                     transform: 'translate(-50%, -50%) translateZ(0)',
+                    maxWidth: 'none',
                     backfaceVisibility: 'hidden',
                     border: 'none',
                     filter: 'brightness(0.6)',
@@ -151,6 +152,8 @@ export default function Hero({ slides = [], ready = true }) {
           position: relative;
           overflow: hidden;
           background-color: var(--bg);
+          max-width: 100vw;
+          contain: paint;
         }
 
         .slide {
