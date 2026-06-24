@@ -108,16 +108,38 @@ export default function InstagramFeed({ logosClientes = '' }) {
         .insta-card {
           flex: 0 0 320px;
           scroll-snap-align: start;
-          border-radius: 4px;
+          position: relative;
+          height: 440px;
+          border-radius: 16px;
           overflow: hidden;
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.08);
           background: #0a0a0a;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-          transition: transform 0.3s var(--ease), border-color 0.3s var(--ease);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.55);
+          transition: transform 0.4s var(--ease), border-color 0.3s var(--ease), box-shadow 0.4s var(--ease);
+        }
+        .insta-card iframe {
+          display: block;
+          filter: brightness(0.82) contrast(1.05) saturate(0.85);
+          transition: filter 0.4s var(--ease);
+        }
+        .insta-card::after {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 60px;
+          z-index: 2;
+          pointer-events: none;
+          background: linear-gradient(to bottom, rgba(10,10,10,0), var(--bg) 85%);
         }
         .insta-card:hover {
-          transform: translateY(-5px);
+          transform: translateY(-6px);
           border-color: var(--accent);
+          box-shadow: 0 25px 50px rgba(0,0,0,0.7);
+        }
+        .insta-card:hover iframe {
+          filter: none;
         }
         .insta-nav-btn {
           position: absolute;
@@ -149,7 +171,7 @@ export default function InstagramFeed({ logosClientes = '' }) {
           .insta-feed-wrapper { padding: 4rem 2rem; }
           .insta-prev { left: 10px; }
           .insta-next { right: 10px; }
-          .insta-card { flex: 0 0 280px; }
+          .insta-card { flex: 0 0 280px; height: 400px; }
         }
       `}</style>
     </section>
