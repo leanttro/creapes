@@ -38,7 +38,7 @@ export default function Clientes({ logos = [] }) {
       <style>{`
         .clients-section {
           padding: 1.5rem 4rem;
-          background: var(--bg);
+          background: #000;
           display: flex;
           gap: 4rem;
           align-items: center;
@@ -91,18 +91,18 @@ export default function Clientes({ logos = [] }) {
         }
         .clients-right::before {
           left: 0;
-          background: linear-gradient(to right, var(--bg), transparent);
+          background: linear-gradient(to right, #000, transparent);
         }
         .clients-right::after {
           right: 0;
-          background: linear-gradient(to left, var(--bg), transparent);
+          background: linear-gradient(to left, #000, transparent);
         }
 
         .clients-track {
           display: flex;
           gap: 4rem;
           align-items: center;
-          animation: marquee-clients 40s linear infinite;
+          animation: marquee-clients 60s linear infinite;
           width: max-content;
         }
         .clients-track.reverse {
