@@ -241,8 +241,8 @@ gsap.registerPlugin(ScrollTrigger);
 
 const SITE_FALLBACK = {
   nome: 'Creapes',
-  logo: 'https://res.cloudinary.com/dhu1cqvrb/image/upload/v1781788827/creapeslogo_jajjgt.png',
-  whatsapp: '5511999999999',
+  logo: 'https://res.cloudinary.com/dhu1cqvrb/image/upload/v1782312172/creapes_2_rzfmqh.png',
+  whatsapp: '5511985816262',
   instagramUrl: 'https://instagram.com/creapes',
   vimeoUrl: 'https://vimeo.com/creapes',
   linkedinUrl: 'https://linkedin.com/company/creapes',
