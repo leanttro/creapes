@@ -18,7 +18,7 @@ function slugFromPath() {
 }
 
 // Mesmo logo usado na Home (fallback caso /api/config não responda)
-const SITE_LOGO_FALLBACK = 'https://res.cloudinary.com/dhu1cqvrb/image/upload/v1782312172/creapes_2_rzfmqh.png';
+const SITE_LOGO_FALLBACK = 'https://res.cloudinary.com/dhu1cqvrb/image/upload/v1781788827/creapeslogo_jajjgt.png';
 
 export default function Case() {
   const [caseData, setCaseData]   = useState(null);
